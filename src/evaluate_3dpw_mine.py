@@ -892,17 +892,12 @@ def evaluate_3dpw(model,
 
 
 if __name__ == '__main__':
-    parser_mine = argparse.ArgumentParser()
-    parser_mine.add_argument('--exp_dir', type=str, default='../data/pretrained/standard')
-    parser_mine.add_argument('--checkpoint_fname', type=str, default='model_epoch_00000003.pth')
-    parser_mine.add_argument('--gpu', default='0', type=str, help='GPU')
-    parser_mine.add_argument('--num_samples', '-N', type=int, default=100, help='Number of test samples to evaluate with')
-    parser_mine.add_argument('--use_subset', '-S',action='store_true')
-    parser_mine.add_argument('--extreme_crop', '-C', action='store_true')
-    parser_mine.add_argument('--extreme_crop_scale', '-CS', type=float, default=0.5)
-
-    args = parser_mine.parse_args()
-    print("ARGS", args)
+    use_subset = False
+    extreme_crop = False
+    extreme_crop_scale = 0.5
+    exp_dir = '../data/pretrained/standard'
+    checkpoint_fname = 'model_epoch_00000003.pth'
+    num_samples = 100
 
     # Set seeds
     np.random.seed(0)
@@ -910,12 +905,12 @@ if __name__ == '__main__':
 
     # Device
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     # Model
     exp = ExperimentConfig()
-    cfg_file = os.path.join(args.exp_dir, "expconfig.yaml")
+    cfg_file = os.path.join(exp_dir, "expconfig.yaml")
     cfg_load = get_config_from_file(cfg_file)
     print("<- Loaded base config settings from: {0}".format(cfg_file))
     parser = get_arg_parser(type(exp), default=cfg_load)
@@ -924,7 +919,7 @@ if __name__ == '__main__':
     set_config(exp.cfg, vars(parsed))
     # pprint_dict(exp.cfg)
     model = Model(**exp.cfg.MODEL).to(device)
-    model_path = os.path.join(args.exp_dir, args.checkpoint_fname)
+    model_path = os.path.join(exp_dir, checkpoint_fname)
     model_state_dict, stats_load, optimizer_state = load_model(model_path)
     own_state = model.state_dict()
     for name, param in model_state_dict.items():
@@ -937,7 +932,7 @@ if __name__ == '__main__':
     model.eval()
 
     # Setup evaluation dataset
-    if args.use_subset:
+    if use_subset:
         selected_fnames = subsets.PW3D_OCCLUDED_JOINTS
         vis_every_n_batches = 1
         vis_joints_threshold = 0.8
@@ -951,8 +946,8 @@ if __name__ == '__main__':
                               img_wh=constants.IMG_RES,
                               selected_fnames=selected_fnames,
                               gt_visible_joints_threshold=0.6,
-                              extreme_crop=args.extreme_crop,
-                              extreme_crop_scale=args.extreme_crop_scale)
+                              extreme_crop=extreme_crop,
+                              extreme_crop_scale=extreme_crop_scale)
     print("Eval examples found:", len(dataset))
 
     # Metrics
@@ -965,11 +960,11 @@ if __name__ == '__main__':
     metrics.append('joints2D_l2es')
     metrics.append('joints2Dsamples_l2es')
 
-    save_path = '/scratch/as2562/3D-Multibodies/evaluations/3dpw_{}_samples'.format(args.num_samples)
-    if args.use_subset:
+    save_path = '/scratch/as2562/3D-Multibodies/evaluations/3dpw_{}_samples'.format(num_samples)
+    if use_subset:
         save_path += '_selected_fnames_occluded_joints'
-    if args.extreme_crop:
-        save_path += '_extreme_crop_scale_{}'.format(args.extreme_crop_scale)
+    if extreme_crop:
+        save_path += '_extreme_crop_scale_{}'.format(extreme_crop_scale)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     print("Saving to:", save_path)
@@ -980,13 +975,13 @@ if __name__ == '__main__':
                   metrics_to_track=metrics,
                   device=device,
                   save_path=save_path,
-                  num_pred_samples=args.num_samples,
+                  num_pred_samples=num_samples,
                   num_workers=4,
                   pin_memory=True,
                   vis_every_n_batches=vis_every_n_batches,
                   num_samples_to_visualise=10,
                   save_per_frame_uncertainty=True,
-                  extreme_crop=args.extreme_crop)
+                  extreme_crop=extreme_crop)
 
 
 
