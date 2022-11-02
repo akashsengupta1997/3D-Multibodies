@@ -473,7 +473,7 @@ def evaluate_3dpw(model,
             body_vis_rgb_rot_samples = []
             pred_cam_t_samples = torch.stack([pred_cam_wp_samples[:, 1],
                                               pred_cam_wp_samples[:, 2],
-                                              2 * constants.FOCAL_LENGTH / (vis_img_wh * pred_cam_wp_samples[0, 0] + 1e-9)], dim=-1).cpu().detach().numpy()
+                                              2 * constants.FOCAL_LENGTH / (vis_img_wh * pred_cam_wp_samples[:, 0] + 1e-9)], dim=-1).cpu().detach().numpy()
             for i in range(num_samples_to_visualise):
                 body_vis_rgb_samples.append(renderer(vertices=pred_vertices_samples[i],
                                                      camera_translation=pred_cam_t_samples[i].copy(),
