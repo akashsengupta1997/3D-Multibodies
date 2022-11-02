@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import argparse
 import cv2
+import math
 
 import config
 from utils import constants
@@ -18,6 +19,7 @@ from utils.pose_utils import compute_similarity_transform_batch, scale_and_trans
 from utils.renderer import Renderer
 from utils.geometry import undo_keypoint_normalisation, convert_weak_perspective_to_camera_translation
 from utils.cam_utils import orthographic_project_torch, check_joints2d_visibility_torch
+from utils.sampling_utils import compute_vertex_uncertainties_from_samples
 from datasets.my_3dpw_eval_dataset import PW3DEvalDataset
 
 from exp_manager.config import get_config_from_file, get_arg_parser, set_config
@@ -121,7 +123,6 @@ def evaluate_3dpw(model,
         target_vertices = target_smpl_output.vertices
         target_joints_h36mlsp = target_smpl_output.joints[:, constants.ALL_JOINTS_TO_H36M_MAP, :][:, constants.H36M_TO_J14, :]
         target_reposed_vertices = target_reposed_smpl_output.vertices
-        print(target_vertices.shape, target_joints_h36mlsp.shape)
 
         # ------------------------------- PREDICTIONS -------------------------------
         pred = model(input)
@@ -130,50 +131,42 @@ def evaluate_3dpw(model,
             print(key, pred[key].shape, pred[key].numel(), torch.isnan(pred[key]).sum().cpu().detach().numpy())
 
         # SPIN predictions as mode
-        pred_cam_wp_mode = pred['spin_camera']
-        pred_pose_rotmats_mode = pred['pred_smpl_params']['body_pose'][:, 0, :, :, :]
-        pred_glob_rotmat_mode = out['pred_smpl_params']['global_orient'][:, 0, :, :, :]
-        pred_shape_mode = out['pred_smpl_params']['betas'][:, 0, :]
-
-        pred_cam_wp_samples = pred['camera']
-
-
-        pred_cam_wp = out['pred_cam'][:, 0, :]
-
-        pred_pose_rotmats_mode = pred['pred_smpl_params']['body_pose'][:, 0, :, :, :]
-        pred_glob_rotmat_mode = out['pred_smpl_params']['global_orient'][:, 0, :, :, :]
-        pred_shape_mode = out['pred_smpl_params']['betas'][:, 0, :]
-
-        pred_pose_rotmats_samples = out['pred_smpl_params']['body_pose'][0, 1:, :, :, :]
-        pred_glob_rotmat_samples = out['pred_smpl_params']['global_orient'][0, 1:, :, :, :]
-        pred_shape_samples = out['pred_smpl_params']['betas'][0, 1:, :]
-        assert pred_pose_rotmats_samples.shape[0] == num_pred_samples
-
-        pred_smpl_output_mode = smpl_neutral(body_pose=pred_pose_rotmats_mode,
-                                             global_orient=pred_glob_rotmat_mode,
-                                             betas=pred_shape_mode,
+        pred_cam_wp_spin = pred['spin_camera']
+        pred_pose_rotmats_spin = pred['spin_local_rotmat']
+        pred_glob_rotmat_spin = pred['spin_global_rotmat']
+        pred_shape_spin = pred['spin_shape']
+        pred_smpl_output_spin = smpl_neutral(body_pose=pred_pose_rotmats_spin,
+                                             global_orient=pred_glob_rotmat_spin,
+                                             betas=pred_shape_spin,
                                              pose2rot=False)
-        pred_vertices_mode = pred_smpl_output_mode.vertices  # (1, 6890, 3)
-        pred_joints_h36mlsp_mode = pred_smpl_output_mode.joints[:, config.ALL_JOINTS_TO_H36M_MAP, :][:, config.H36M_TO_J14, :]  # (1, 14, 3)
-        pred_joints_coco_mode = pred_smpl_output_mode.joints[:, config.ALL_JOINTS_TO_COCO_MAP, :]  # (1, 17, 3)
+        pred_vertices_spin = pred_smpl_output_spin.vertices  # (1, 6890, 3)
+        pred_joints_h36mlsp_spin = pred_smpl_output_spin.joints[:, config.ALL_JOINTS_TO_H36M_MAP, :][:, config.H36M_TO_J14, :]  # (1, 14, 3)
+        pred_joints_coco_spin = pred_smpl_output_spin.joints[:, config.ALL_JOINTS_TO_COCO_MAP, :]  # (1, 17, 3)
+        pred_vertices2D_spin_for_vis = orthographic_project_torch(pred_vertices_spin,
+                                                                  pred_cam_wp_spin,
+                                                                  scale_first=False)
+        pred_vertices2D_spin_for_vis = undo_keypoint_normalisation(pred_vertices2D_spin_for_vis, vis_img_wh)
+        pred_joints2D_coco_spin_normed = orthographic_project_torch(pred_joints_coco_spin,
+                                                                    pred_cam_wp_spin,
+                                                                    scale_first=False)  # (1, 17, 2)
+        pred_joints2D_coco_spin = undo_keypoint_normalisation(pred_joints2D_coco_spin_normed, input.shape[-1])
+        pred_joints2D_coco_spin_for_vis = undo_keypoint_normalisation(pred_joints2D_coco_spin_normed, vis_img_wh)
+        pred_reposed_vertices_spin = smpl_neutral(betas=pred_shape_spin).vertices  # (1, 6890, 3)
 
-        pred_vertices2D_mode_for_vis = orthographic_project_torch(pred_vertices_mode, pred_cam_wp, scale_first=False)
-        pred_vertices2D_mode_for_vis = undo_keypoint_normalisation(pred_vertices2D_mode_for_vis, vis_img_wh)
-        pred_joints2D_coco_mode_normed = orthographic_project_torch(pred_joints_coco_mode, pred_cam_wp)  # (1, 17, 2)
-        pred_joints2D_coco_mode = undo_keypoint_normalisation(pred_joints2D_coco_mode_normed, input.shape[-1])
-        pred_joints2D_coco_mode_for_vis = undo_keypoint_normalisation(pred_joints2D_coco_mode_normed, vis_img_wh)
-
-        pred_reposed_vertices_mean = smpl_neutral(betas=pred_shape_mode).vertices  # (1, 6890, 3)
+        pred_cam_wp_samples = pred['pred_camera'][0]  # (num_samples, 3)
+        pred_pose_rotmats_samples = pred['pred_local_rotmat'][0]  # (num_samples, 23, 3, 3)
+        pred_glob_rotmat_samples = pred['pred_global_rotmat'][0]  # (num_samples, 1, 3, 3)
+        pred_shape_samples = pred['pred_shape'][0]  # (num_samples, 10)
 
         pred_smpl_output_samples = smpl_neutral(body_pose=pred_pose_rotmats_samples,
                                                 global_orient=pred_glob_rotmat_samples,
                                                 betas=pred_shape_samples,
                                                 pose2rot=False)
         pred_vertices_samples = pred_smpl_output_samples.vertices  # (num_pred_samples, 6890, 3)
-        pred_joints_h36mlsp_samples = pred_smpl_output_samples.joints[:, config.ALL_JOINTS_TO_H36M_MAP, :][:, config.H36M_TO_J14, :]  # (num_samples, 14, 3)
+        pred_joints_h36mlsp_samples = pred_smpl_output_samples.joints[:, constants.ALL_JOINTS_TO_H36M_MAP, :][:, constants.H36M_TO_J14, :]  # (num_samples, 14, 3)
 
-        pred_joints_coco_samples = pred_smpl_output_samples.joints[:, config.ALL_JOINTS_TO_COCO_MAP, :]  # (num_pred_samples, 17, 3)
-        pred_joints2D_coco_samples = orthographic_project_torch(pred_joints_coco_samples, pred_cam_wp)  # (num_pred_samples, 17, 2)
+        pred_joints_coco_samples = pred_smpl_output_samples.joints[:, constants.ALL_JOINTS_TO_COCO_MAP, :]  # (num_pred_samples, 17, 3)
+        pred_joints2D_coco_samples = orthographic_project_torch(pred_joints_coco_samples, pred_cam_wp_samples)  # (num_pred_samples, 17, 2)
         pred_joints2D_coco_samples = undo_keypoint_normalisation(pred_joints2D_coco_samples, input.shape[-1])
 
         pred_reposed_vertices_samples = smpl_neutral(body_pose=torch.zeros(num_pred_samples, 69, device=device, dtype=torch.float32),
@@ -192,13 +185,12 @@ def evaluate_3dpw(model,
         target_joints2D_vis_coco = target_joints2D_vis_coco.cpu().detach().numpy()
 
         # Numpy-fying preds
-        pred_vertices_mode = pred_vertices_mode.cpu().detach().numpy()
-        pred_joints_h36mlsp_mode = pred_joints_h36mlsp_mode.cpu().detach().numpy()
-        pred_joints_coco_mode = pred_joints_coco_mode.cpu().detach().numpy()
-        pred_vertices2D_mode_for_vis = pred_vertices2D_mode_for_vis.cpu().detach().numpy()
-        pred_joints2D_coco_mode = pred_joints2D_coco_mode.cpu().detach().numpy()
-        pred_joints2D_coco_mode_for_vis = pred_joints2D_coco_mode_for_vis.cpu().detach().numpy()
-        pred_reposed_vertices_mean = pred_reposed_vertices_mean.cpu().detach().numpy()
+        pred_vertices_spin = pred_vertices_spin.cpu().detach().numpy()
+        pred_joints_h36mlsp_spin = pred_joints_h36mlsp_spin.cpu().detach().numpy()
+        pred_vertices2D_spin_for_vis = pred_vertices2D_spin_for_vis.cpu().detach().numpy()
+        pred_joints2D_coco_spin = pred_joints2D_coco_spin.cpu().detach().numpy()
+        pred_joints2D_coco_spin_for_vis = pred_joints2D_coco_spin_for_vis.cpu().detach().numpy()
+        pred_reposed_vertices_spin = pred_reposed_vertices_spin.cpu().detach().numpy()
 
         pred_vertices_samples = pred_vertices_samples.cpu().detach().numpy()
         pred_joints_h36mlsp_samples = pred_joints_h36mlsp_samples.cpu().detach().numpy()
@@ -208,7 +200,7 @@ def evaluate_3dpw(model,
 
         # -------------- 3D Metrics with Mode and Minimum Error Samples --------------
         if 'pves' in metrics_to_track:
-            pve_batch = np.linalg.norm(pred_vertices_mode - target_vertices,
+            pve_batch = np.linalg.norm(pred_vertices_spin - target_vertices,
                                        axis=-1)  # (bs, 6890)
             metric_sums['pves'] += np.sum(pve_batch)  # scalar
             per_frame_metrics['pves'].append(np.mean(pve_batch, axis=-1))
@@ -223,7 +215,7 @@ def evaluate_3dpw(model,
         # Scale and translation correction
         if 'pves_sc' in metrics_to_track:
             pred_vertices_sc = scale_and_translation_transform_batch(
-                pred_vertices_mode,
+                pred_vertices_spin,
                 target_vertices)
             pve_sc_batch = np.linalg.norm(
                 pred_vertices_sc - target_vertices,
@@ -244,7 +236,7 @@ def evaluate_3dpw(model,
 
         # Procrustes analysis
         if 'pves_pa' in metrics_to_track:
-            pred_vertices_pa = compute_similarity_transform_batch(pred_vertices_mode, target_vertices)
+            pred_vertices_pa = compute_similarity_transform_batch(pred_vertices_spin, target_vertices)
             pve_pa_batch = np.linalg.norm(pred_vertices_pa - target_vertices, axis=-1)  # (bs, 6890)
             metric_sums['pves_pa'] += np.sum(pve_pa_batch)  # scalar
             per_frame_metrics['pves_pa'].append(np.mean(pve_pa_batch, axis=-1))
@@ -261,7 +253,7 @@ def evaluate_3dpw(model,
             per_frame_metrics['pves_pa_samples_min'].append(np.mean(pve_pa_samples_min_batch, axis=-1, keepdims=True))  # (1,)
 
         if 'pve-ts' in metrics_to_track:
-            pvet_batch = np.linalg.norm(pred_reposed_vertices_mean - target_reposed_vertices, axis=-1)
+            pvet_batch = np.linalg.norm(pred_reposed_vertices_spin - target_reposed_vertices, axis=-1)
             metric_sums['pve-ts'] += np.sum(pvet_batch)  # scalar
             per_frame_metrics['pve-ts'].append(np.mean(pvet_batch, axis=-1))
 
@@ -275,7 +267,7 @@ def evaluate_3dpw(model,
         # Scale and translation correction
         if 'pve-ts_sc' in metrics_to_track:
             pred_reposed_vertices_sc = scale_and_translation_transform_batch(
-                pred_reposed_vertices_mean,
+                pred_reposed_vertices_spin,
                 target_reposed_vertices)
             pvet_scale_corrected_batch = np.linalg.norm(
                 pred_reposed_vertices_sc - target_reposed_vertices,
@@ -295,7 +287,7 @@ def evaluate_3dpw(model,
             per_frame_metrics['pve-ts_sc_samples_min'].append(np.mean(pvet_sc_samples_min_batch, axis=-1, keepdims=True))  # (1,)
 
         if 'mpjpes' in metrics_to_track:
-            mpjpe_batch = np.linalg.norm(pred_joints_h36mlsp_mode - target_joints_h36mlsp, axis=-1)  # (bs, 14)
+            mpjpe_batch = np.linalg.norm(pred_joints_h36mlsp_spin - target_joints_h36mlsp, axis=-1)  # (bs, 14)
             metric_sums['mpjpes'] += np.sum(mpjpe_batch)  # scalar
             per_frame_metrics['mpjpes'].append(np.mean(mpjpe_batch, axis=-1))
 
@@ -309,7 +301,7 @@ def evaluate_3dpw(model,
         # Scale and translation correction
         if 'mpjpes_sc' in metrics_to_track:
             pred_joints_h36mlsp_sc = scale_and_translation_transform_batch(
-                pred_joints_h36mlsp_mode,
+                pred_joints_h36mlsp_spin,
                 target_joints_h36mlsp)
             mpjpe_sc_batch = np.linalg.norm(
                 pred_joints_h36mlsp_sc - target_joints_h36mlsp,
@@ -330,7 +322,7 @@ def evaluate_3dpw(model,
 
         # Procrustes analysis
         if 'mpjpes_pa' in metrics_to_track:
-            pred_joints_h36mlsp_pa = compute_similarity_transform_batch(pred_joints_h36mlsp_mode, target_joints_h36mlsp)
+            pred_joints_h36mlsp_pa = compute_similarity_transform_batch(pred_joints_h36mlsp_spin, target_joints_h36mlsp)
             mpjpe_pa_batch = np.linalg.norm(pred_joints_h36mlsp_pa - target_joints_h36mlsp, axis=-1)  # (bs, 14)
             metric_sums['mpjpes_pa'] += np.sum(mpjpe_pa_batch)  # scalar
             per_frame_metrics['mpjpes_pa'].append(np.mean(mpjpe_pa_batch, axis=-1))
@@ -389,7 +381,7 @@ def evaluate_3dpw(model,
         # -------------------------------- 2D Metrics ---------------------------
         # Using JRNet 2D joints as target, rather than GT
         if 'hrnet_joints2D_l2es' in metrics_to_track:
-            hrnet_joints2D_l2e_batch = np.linalg.norm(pred_joints2D_coco_mode[:, hrnet_joints2D_vis_coco[0], :] - hrnet_joints2D_coco[:, hrnet_joints2D_vis_coco[0], :],
+            hrnet_joints2D_l2e_batch = np.linalg.norm(pred_joints2D_coco_spin[:, hrnet_joints2D_vis_coco[0], :] - hrnet_joints2D_coco[:, hrnet_joints2D_vis_coco[0], :],
                                                       axis=-1)  # (1, num vis joints)
             assert hrnet_joints2D_l2e_batch.shape[1] == hrnet_joints2D_vis_coco.sum()
 
@@ -398,7 +390,7 @@ def evaluate_3dpw(model,
             per_frame_metrics['hrnet_joints2D_l2es'].append(np.mean(hrnet_joints2D_l2e_batch, axis=-1))  # (1,)
 
         if 'joints2D_l2es' in metrics_to_track:
-            joints2D_l2e_batch = np.linalg.norm(pred_joints2D_coco_mode[:, target_joints2D_vis_coco[0], :] - target_joints2D_coco[:, target_joints2D_vis_coco[0], :],
+            joints2D_l2e_batch = np.linalg.norm(pred_joints2D_coco_spin[:, target_joints2D_vis_coco[0], :] - target_joints2D_coco[:, target_joints2D_vis_coco[0], :],
                                                 axis=-1)  # (1, num vis joints)
             assert joints2D_l2e_batch.shape[1] == target_joints2D_vis_coco.sum()
 
@@ -428,20 +420,20 @@ def evaluate_3dpw(model,
         metric_sums['num_datapoints'] += target_pose.shape[0]
 
         fname_per_frame.append(fname)
-        pose_per_frame.append(np.concatenate([pred_glob_rotmat_mode.cpu().detach().numpy(),
-                                              pred_pose_rotmats_mode.cpu().detach().numpy()],
+        pose_per_frame.append(np.concatenate([pred_glob_rotmat_spin.cpu().detach().numpy(),
+                                              pred_pose_rotmats_spin.cpu().detach().numpy()],
                                              axis=1))
-        shape_per_frame.append(pred_shape_mode.cpu().detach().numpy())
-        cam_per_frame.append(pred_cam_wp.cpu().detach().numpy())
+        shape_per_frame.append(pred_shape_spin.cpu().detach().numpy())
+        cam_per_frame.append(pred_cam_wp_spin.cpu().detach().numpy())
 
         # ------------------------------- VISUALISE -------------------------------
         if vis_every_n_batches is not None and batch_num % vis_every_n_batches == 0:
             vis_img = samples_batch['vis_img'].numpy()
 
             # pred_cam_t = out['pred_cam_t'][0, 0, :].cpu().detach().numpy()
-            pred_cam_t = torch.stack([pred_cam_wp[0, 1],
-                                      pred_cam_wp[0, 2],
-                                      2 * model_cfg.EXTRA.FOCAL_LENGTH / (vis_img_wh * pred_cam_wp[0, 0] + 1e-9)], dim=-1).cpu().detach().numpy()
+            pred_cam_t_spin = torch.stack([pred_cam_wp_spin[0, 1],
+                                           pred_cam_wp_spin[0, 2],
+                                           2 * constants.FOCAL_LENGTH / (vis_img_wh * pred_cam_wp_spin[0, 0] + 1e-9)], dim=-1).cpu().detach().numpy()
 
             # Uncertainty Computation
             # Uncertainty computed by sampling + average distance from mean
@@ -452,41 +444,36 @@ def evaluate_3dpw(model,
                 vertices_uncertainty_per_frame.append(avg_vertices_distance_from_mean)
 
             # Render predicted meshes
-            body_vis_rgb_mode = renderer(vertices=pred_vertices_mode[0],
-                                         camera_translation=pred_cam_t.copy(),
-                                         image=vis_img[0],
-                                         unnormalise_img=False)
-            body_vis_rgb_mode_rot = renderer(vertices=pred_vertices_mode[0],
-                                             camera_translation=pred_cam_t.copy() if not extreme_crop else rot_cam_t.copy(),
+            body_vis_rgb_spin = renderer(vertices=pred_vertices_spin[0],
+                                         camera_translation=pred_cam_t_spin.copy(),
+                                         image=vis_img[0])
+            body_vis_rgb_spin_rot = renderer(vertices=pred_vertices_spin[0],
+                                             camera_translation=pred_cam_t_spin.copy() if not extreme_crop else rot_cam_t.copy(),
                                              image=np.zeros_like(vis_img[0]),
-                                             unnormalise_img=False,
                                              angle=np.pi / 2.,
                                              axis=[0., 1., 0.])
 
-            reposed_body_vis_rgb_mean = renderer(vertices=pred_reposed_vertices_mean[0],
+            reposed_body_vis_rgb_spin = renderer(vertices=pred_reposed_vertices_spin[0],
                                                  camera_translation=reposed_cam_t.copy(),
-                                                 image=np.zeros_like(vis_img[0]),
-                                                 unnormalise_img=False,
-                                                 flip_updown=False)
-            reposed_body_vis_rgb_mean_rot = renderer(vertices=pred_reposed_vertices_mean[0],
+                                                 image=np.zeros_like(vis_img[0]))
+            reposed_body_vis_rgb_mean_rot = renderer(vertices=pred_reposed_vertices_spin[0],
                                                      camera_translation=reposed_cam_t.copy(),
                                                      image=np.zeros_like(vis_img[0]),
-                                                     unnormalise_img=False,
                                                      angle=np.pi / 2.,
-                                                     axis=[0., 1., 0.],
-                                                     flip_updown=False)
+                                                     axis=[0., 1., 0.])
 
             body_vis_rgb_samples = []
             body_vis_rgb_rot_samples = []
+            pred_cam_t_samples = torch.stack([pred_cam_wp_samples[:, 1],
+                                              pred_cam_wp_samples[:, 2],
+                                              2 * constants.FOCAL_LENGTH / (vis_img_wh * pred_cam_wp_samples[0, 0] + 1e-9)], dim=-1).cpu().detach().numpy()
             for i in range(num_samples_to_visualise):
                 body_vis_rgb_samples.append(renderer(vertices=pred_vertices_samples[i],
-                                                     camera_translation=pred_cam_t.copy(),
-                                                     image=vis_img[0],
-                                                     unnormalise_img=False))
+                                                     camera_translation=pred_cam_t_samples[i].copy(),
+                                                     image=vis_img[0]))
                 body_vis_rgb_rot_samples.append(renderer(vertices=pred_vertices_samples[i],
-                                                         camera_translation=pred_cam_t.copy() if not extreme_crop else rot_cam_t.copy(),
+                                                         camera_translation=pred_cam_t_samples[i].copy() if not extreme_crop else rot_cam_t.copy(),
                                                          image=np.zeros_like(vis_img[0]),
-                                                         unnormalise_img=False,
                                                          angle=np.pi / 2.,
                                                          axis=[0., 1., 0.]))
 
@@ -511,12 +498,12 @@ def evaluate_3dpw(model,
             plt.subplot(num_row, num_col, subplot_count)
             plt.gca().axis('off')
             plt.imshow(vis_img[0])
-            plt.scatter(pred_vertices2D_mode_for_vis[0, :, 0],
-                        pred_vertices2D_mode_for_vis[0, :, 1],
+            plt.scatter(pred_vertices2D_spin_for_vis[0, :, 0],
+                        pred_vertices2D_spin_for_vis[0, :, 1],
                         c='r', s=0.01)
             if 'joints2D_l2es' in metrics_to_track:
-                plt.scatter(pred_joints2D_coco_mode_for_vis[0, :, 0],
-                            pred_joints2D_coco_mode_for_vis[0, :, 1],
+                plt.scatter(pred_joints2D_coco_spin_for_vis[0, :, 0],
+                            pred_joints2D_coco_spin_for_vis[0, :, 1],
                             c='r', s=10.0)
                 for j in range(target_joints2D_coco.shape[1]):
                     if target_joints2D_vis_coco[0][j]:
@@ -526,26 +513,26 @@ def evaluate_3dpw(model,
                         plt.text(target_joints2D_coco[0, j, 0],
                                  target_joints2D_coco[0, j, 1],
                                  str(j))
-                    plt.text(pred_joints2D_coco_mode_for_vis[0, j, 0],
-                             pred_joints2D_coco_mode_for_vis[0, j, 1],
+                    plt.text(pred_joints2D_coco_spin_for_vis[0, j, 0],
+                             pred_joints2D_coco_spin_for_vis[0, j, 1],
                              str(j))
             subplot_count += 1
 
             # Plot body render overlaid on vis image
             plt.subplot(num_row, num_col, subplot_count)
             plt.gca().axis('off')
-            plt.imshow(body_vis_rgb_mode)
+            plt.imshow(body_vis_rgb_spin)
             subplot_count += 1
 
             plt.subplot(num_row, num_col, subplot_count)
             plt.gca().axis('off')
-            plt.imshow(body_vis_rgb_mode_rot)
+            plt.imshow(body_vis_rgb_spin_rot)
             subplot_count += 1
 
             # Plot reposed body render
             plt.subplot(num_row, num_col, subplot_count)
             plt.gca().axis('off')
-            plt.imshow(reposed_body_vis_rgb_mean)
+            plt.imshow(reposed_body_vis_rgb_spin)
             subplot_count += 1
 
             plt.subplot(num_row, num_col, subplot_count)
@@ -777,12 +764,12 @@ def evaluate_3dpw(model,
             # Plot mode prediction
             plt.subplot(num_row, num_col, subplot_count)
             plt.gca().axis('off')
-            plt.imshow(body_vis_rgb_mode)
+            plt.imshow(body_vis_rgb_spin)
             subplot_count += 1
 
             plt.subplot(num_row, num_col, subplot_count)
             plt.gca().axis('off')
-            plt.imshow(body_vis_rgb_mode_rot)
+            plt.imshow(body_vis_rgb_spin_rot)
             subplot_count += 1
 
             # Plot samples from predicted distribution
@@ -899,7 +886,7 @@ if __name__ == '__main__':
     parser_mine.add_argument('--exp_dir', type=str, default='../data/pretrained/standard')
     parser_mine.add_argument('--checkpoint_fname', type=str, default='model_epoch_00000003.pth')
     parser_mine.add_argument('--gpu', default='0', type=str, help='GPU')
-    parser_mine.add_argument('--num_samples', '-N', type=int, default=25, help='Number of test samples to evaluate with')
+    parser_mine.add_argument('--num_samples', '-N', type=int, default=100, help='Number of test samples to evaluate with')
     parser_mine.add_argument('--use_subset', '-S',action='store_true')
     parser_mine.add_argument('--extreme_crop', '-C', action='store_true')
     parser_mine.add_argument('--extreme_crop_scale', '-CS', type=float, default=0.5)
