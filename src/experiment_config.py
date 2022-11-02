@@ -9,7 +9,7 @@ import os
 
 from datasets.dataset_zoo import dataset_zoo
 from optimizer import Optimizer
-from model import Model
+from model_mine import Model
 
 
 class ExperimentConfig(object):
