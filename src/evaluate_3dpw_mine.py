@@ -922,6 +922,7 @@ if __name__ == '__main__':
     own_state = model.state_dict()
     for name, param in model_state_dict.items():
         try:
+            print('\n', name, param.shape, own_state[name].shape)
             own_state[name].copy_(param)
         except Exception as e:
             print(e)
