@@ -893,11 +893,17 @@ def evaluate_3dpw(model,
 
 if __name__ == '__main__':
     use_subset = False
+    num_samples = 100
     extreme_crop = False
     extreme_crop_scale = 0.5
-    exp_dir = '../data/pretrained/standard'
-    checkpoint_fname = 'model_epoch_00000003.pth'
-    num_samples = 100
+
+    if extreme_crop:
+        exp_dir = '../data/pretrained/ambiguous'
+        checkpoint_fname = 'model_epoch_00000013.pth'
+    else:
+        exp_dir = '../data/pretrained/standard'
+        checkpoint_fname = 'model_epoch_00000003.pth'
+    pritn(exp_dir, checkpoint_fname)
 
     # Set seeds
     np.random.seed(0)
