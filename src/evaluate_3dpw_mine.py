@@ -125,12 +125,19 @@ def evaluate_3dpw(model,
 
         # ------------------------------- PREDICTIONS -------------------------------
         pred = model(input)
-        # print('\nMODEL OUT')
-        # for key in pred:
-        #     print(key, pred[key].shape, pred[key].numel(), torch.isnan(pred[key]).sum().cpu().detach().numpy())
+        print('\nMODEL OUT')
+        for key in pred:
+            print(key, pred[key].shape, pred[key].numel(), torch.isnan(pred[key]).sum().cpu().detach().numpy())
 
-        print(pred['pred_camera'])
-        print(pred['spin_camera'])
+        # SPIN predictions as mode
+        pred_cam_wp_mode = pred['spin_camera']
+        pred_pose_rotmats_mode = pred['pred_smpl_params']['body_pose'][:, 0, :, :, :]
+        pred_glob_rotmat_mode = out['pred_smpl_params']['global_orient'][:, 0, :, :, :]
+        pred_shape_mode = out['pred_smpl_params']['betas'][:, 0, :]
+
+        pred_cam_wp_samples = pred['camera']
+
+
         pred_cam_wp = out['pred_cam'][:, 0, :]
 
         pred_pose_rotmats_mode = pred['pred_smpl_params']['body_pose'][:, 0, :, :, :]
