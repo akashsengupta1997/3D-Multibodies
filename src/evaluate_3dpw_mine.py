@@ -504,6 +504,7 @@ def evaluate_3dpw(model,
 
             # Plot pred vertices 2D and body render overlaid over input
             # also add target joints 2D scatter
+            target_joints2D_coco = target_joints2D_coco * (vis_img_wh / input.shape[-1])
             plt.subplot(num_row, num_col, subplot_count)
             plt.gca().axis('off')
             plt.imshow(vis_img[0])
