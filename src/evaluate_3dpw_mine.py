@@ -921,21 +921,21 @@ if __name__ == '__main__':
     model_state_dict, stats_load, optimizer_state = load_model(model_path)
     own_state = model.state_dict()
 
-    print('\nMODEL STATE DICT')
-    for name, param in model_state_dict.items():
-        print(name, param.shape)
+    # print('\nMODEL STATE DICT')
+    # for name, param in model_state_dict.items():
+    #     print(name, param.shape)
+    #
+    # print('\nOWN STATE DICT')
+    # for name, param in own_state.items():
+    #     print(name, param.shape)
 
-    print('\nOWN STATE DICT')
-    for name, param in own_state.items():
-        print(name, param.shape)
-
     for name, param in model_state_dict.items():
-        print('\n', name, param.shape, own_state[name].shape)
+        print('\n', name, name[7:], param.shape, own_state[name[7:]].shape)
         try:
-            own_state[name].copy_(param)
+            own_state[name[7:]].copy_(param)
         except Exception as e:
             print(e)
-            print("Unable to load: {0}".format(name))
+            print("Unable to load: {0}".format(name[7:]))
     model.eval()
 
     # Setup evaluation dataset
