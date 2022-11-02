@@ -13,7 +13,7 @@ import config
 from utils import constants
 from model_mine import Model
 from experiment_config import ExperimentConfig
-from smpl import SMPL
+from networks.smpl.smpl_mine import SMPL
 from utils.pose_utils import compute_similarity_transform_batch, scale_and_translation_transform_batch
 from utils.renderer import Renderer
 from utils.geometry import undo_keypoint_normalisation, convert_weak_perspective_to_camera_translation
