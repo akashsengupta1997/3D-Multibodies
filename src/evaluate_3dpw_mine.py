@@ -890,7 +890,6 @@ def evaluate_3dpw(model,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--checkpoint', type=str, default='data/checkpoint.pt', help='Path to pretrained model checkpoint')
     parser.add_argument('--exp_dir', type=str, default='../data/pretrained/standard')
     parser.add_argument('--gpu', default='0', type=str, help='GPU')
     parser.add_argument('--num_samples', '-N', type=int, default=25, help='Number of test samples to evaluate with')

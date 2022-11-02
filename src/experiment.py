@@ -38,7 +38,7 @@ import time
 import numpy as np
 import copy
 import ast
-import pandas as pd
+# import pandas as pd
 
 
 class Experiment(BaseExperiment):
