@@ -349,7 +349,6 @@ class ConditionalHMR(nn.Module):
         super(ConditionalHMR, self).__init__()
 
         smpl_mean_params = global_config.SMPL_MEAN_PARAMS
-        print('HERE', global_config.SMPL_MEAN_PARAMS)
         self.model = HMR_CondSpin(
             num_modes,
             num_flows,

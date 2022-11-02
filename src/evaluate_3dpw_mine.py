@@ -118,8 +118,9 @@ def evaluate_3dpw(model,
             target_reposed_smpl_output = smpl_female(betas=target_shape)
 
         target_vertices = target_smpl_output.vertices
-        target_joints_h36mlsp = target_smpl_output.joints[:, config.ALL_JOINTS_TO_H36M_MAP, :][:, config.H36M_TO_J14, :]
+        target_joints_h36mlsp = target_smpl_output.joints[:, constants.ALL_JOINTS_TO_H36M_MAP, :][:, constants.H36M_TO_J14, :]
         target_reposed_vertices = target_reposed_smpl_output.vertices
+        print(target_vertices.shape, target_joints_h36mlsp.shape)
 
         # ------------------------------- PREDICTIONS -------------------------------
         pred = model(input)
