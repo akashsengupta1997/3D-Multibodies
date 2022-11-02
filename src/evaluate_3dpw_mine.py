@@ -124,6 +124,7 @@ def evaluate_3dpw(model,
 
         # ------------------------------- PREDICTIONS -------------------------------
         pred = model(input)
+        print('\nMODEL OUT')
         for key in pred:
             print(key, pred[key].shape)
         return
