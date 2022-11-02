@@ -903,7 +903,7 @@ if __name__ == '__main__':
     else:
         exp_dir = '../data/pretrained/standard'
         checkpoint_fname = 'model_epoch_00000003.pth'
-    pritn(exp_dir, checkpoint_fname)
+    print(exp_dir, checkpoint_fname)
 
     # Set seeds
     np.random.seed(0)
