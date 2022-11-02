@@ -126,7 +126,8 @@ def evaluate_3dpw(model,
         pred = model(input)
         print('\nMODEL OUT')
         for key in pred:
-            print(key, pred[key].shape)
+            print('\n', key)
+            print(pred[key])
         print(pred['pred_camera'])
         pred_cam_wp = out['pred_cam'][:, 0, :]
 
