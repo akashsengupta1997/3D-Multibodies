@@ -299,6 +299,7 @@ class HMR_CondSpin(nn.Module):
 
     def forward(self, x, init_pose=None, init_shape=None, init_cam=None, n_iter=3):
         xf_spin, xf_extra = self.encode(x)
+        print(torch.isnan(xf_spin).sum())
         xfm = torch.cat([xf_spin, xf_extra], dim=1)
         print("Num NaN: {0}".format(~(~torch.isnan(xfm)).sum()))
         hmr_results = self.decode_smpl(xfm, n_iter=n_iter)
