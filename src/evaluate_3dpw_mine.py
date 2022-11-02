@@ -926,7 +926,7 @@ if __name__ == '__main__':
         print(name, param.shape)
 
     print('\nOWN STATE DICT')
-    for name, param in own_state.item():
+    for name, param in own_state.items():
         print(name, param.shape)
 
     for name, param in model_state_dict.items():
