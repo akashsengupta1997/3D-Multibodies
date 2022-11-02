@@ -127,7 +127,7 @@ def evaluate_3dpw(model,
         print('\nMODEL OUT')
         for key in pred:
             print('\n', key)
-            print(pred[key])
+            print(pred[key].shape, pred[key].isnan().sum())
         print(pred['pred_camera'])
         pred_cam_wp = out['pred_cam'][:, 0, :]
 
