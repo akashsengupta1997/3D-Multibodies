@@ -109,17 +109,20 @@ class Model(BaseModel):
         print('\nHMR PRED')
         for key in hmr_pred:
             print(key, hmr_pred[key].shape)
-        pred_shape = hmr_pred['pred_shape']
-        pred_camera = hmr_pred['pred_camera']
-        pred_global_rotmat = hmr_pred['pred_global_rotmat']
-        pred_pose_axis = MinofN.compress_modes_into_batch(
-            hmr_pred['pred_local_axis'])
 
-        pred_rotmat = batch_rodrigues(pred_pose_axis.contiguous().view(-1, 3)).view(
-            batch_size, self.num_modes, 23, 3, 3)
+        return hmr_pred
+
+        # pred_shape = hmr_pred['pred_shape']
+        # pred_camera = hmr_pred['pred_camera']
+        # pred_global_rotmat = hmr_pred['pred_global_rotmat']
+        # pred_pose_axis = MinofN.compress_modes_into_batch(
+        #     hmr_pred['pred_local_axis'])
+        #
+        # pred_rotmat = batch_rodrigues(pred_pose_axis.contiguous().view(-1, 3)).view(
+        #     batch_size, self.num_modes, 23, 3, 3)
 
         # out_fpose_mode: (N, M, 24, 3, 3)
-        out_fpose_mode = torch.cat([pred_global_rotmat, pred_rotmat], dim=2)
+        # out_fpose_mode = torch.cat([pred_global_rotmat, pred_rotmat], dim=2)
 
         # # Run all modes through SMPL, after compressing
         # # (N, M, ...) -> (N * M, ...)
@@ -138,17 +141,17 @@ class Model(BaseModel):
         #     out_shape_compressed,
         #     run_mini=True)
 
-        # Convert Weak Perspective Camera [s, tx, ty] to camera translation [tx, ty, tz] in 3D given the bounding box size
-        # This camera translation can be used in a full perspective projection
-        out_camera_mode = MinofN.compress_modes_into_batch(pred_camera)
-        tz = 2 * self.focal_length / (global_config.IMG_RES * out_camera_mode[:, 0] + 1e-9)
-        pred_cam_t = torch.stack([out_camera_mode[:, 1],
-                                  out_camera_mode[:, 2],
-                                  tz], dim=-1)
-
-        camera_center = torch.zeros(batch_size * self.num_modes, 2)
-        camera_rotation = torch.eye(3).unsqueeze(0).expand(
-            batch_size * self.num_modes, -1, -1).to(device)
+        # # Convert Weak Perspective Camera [s, tx, ty] to camera translation [tx, ty, tz] in 3D given the bounding box size
+        # # This camera translation can be used in a full perspective projection
+        # out_camera_mode = MinofN.compress_modes_into_batch(pred_camera)
+        # tz = 2 * self.focal_length / (global_config.IMG_RES * out_camera_mode[:, 0] + 1e-9)
+        # pred_cam_t = torch.stack([out_camera_mode[:, 1],
+        #                           out_camera_mode[:, 2],
+        #                           tz], dim=-1)
+        #
+        # camera_center = torch.zeros(batch_size * self.num_modes, 2)
+        # camera_rotation = torch.eye(3).unsqueeze(0).expand(
+        #     batch_size * self.num_modes, -1, -1).to(device)
 
         # # (N * M, 49, 2)
         # projected_joints_mode = perspective_projection(
@@ -192,7 +195,7 @@ class Model(BaseModel):
         #        out_model_joints_reshape.shape[0] == \
         #        out_projected_joints_reshape.shape[0], "Batch sizes don't match"
 
-        preds = {}
+        # preds = {}
 
 
         # ######## Compute accuracy metrics ########
@@ -328,14 +331,14 @@ class Model(BaseModel):
         # preds['out_joints_mode'] = out_model_joints_reshape
         # preds['out_verts_mode'] = out_verts_mode_reshape
         # preds['out_pelvis_mode'] = out_pelvis_mode_reshape
-        preds['out_fpose_mode'] = out_fpose_mode
-        preds['out_shape_mode'] = pred_shape
+        # preds['out_fpose_mode'] = out_fpose_mode
+        # preds['out_shape_mode'] = pred_shape
         # preds['out_projkps_mode'] = out_projected_joints_reshape
-        preds['out_cam_t'] = pred_cam_t.reshape(batch_size, self.num_modes, -1)
-        preds['out_cam_wp'] = pred_camera
-        preds['out_pose_rotmats'] = pred_rotmat
-        preds['out_glob_rotmat'] = pred_global_rotmat
+        # preds['out_cam_t'] = pred_cam_t.reshape(batch_size, self.num_modes, -1)
+        # preds['out_cam_wp'] = pred_camera
+        # preds['out_pose_rotmats'] = pred_rotmat
+        # preds['out_glob_rotmat'] = pred_global_rotmat
         # preds['min_mode_gt'] = minofn_mode_ids
 
-        return preds
+        # return preds
 
