@@ -910,11 +910,11 @@ if __name__ == '__main__':
     cfg_file = os.path.join(args.exp_dir, "expconfig.yaml")
     cfg_load = get_config_from_file(cfg_file)
     print("<- Loaded base config settings from: {0}".format(cfg_file))
-    print(exp.cfg.exp_dir)
     parser = get_arg_parser(type(exp), default=cfg_load)
     parsed = parser.parse_args()
     set_config(exp.cfg, vars(parsed))
     pprint_dict(exp.cfg)
+    print('HERERdfasfd', exp.cfg.exp_dir)
     model = Model(**exp.cfg.MODEL).to(device)
     # model_path =
     # model_state_dict, stats_load, optimizer_state = load_model(model_path)
