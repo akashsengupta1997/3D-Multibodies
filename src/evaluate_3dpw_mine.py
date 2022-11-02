@@ -915,7 +915,6 @@ if __name__ == '__main__':
     print("<- Loaded base config settings from: {0}".format(cfg_file))
     parser = get_arg_parser(type(exp), default=cfg_load)
     parsed = parser.parse_args()
-    print("PARSED", parsed)
     set_config(exp.cfg, vars(parsed))
     # pprint_dict(exp.cfg)
     model = Model(**exp.cfg.MODEL).to(device)

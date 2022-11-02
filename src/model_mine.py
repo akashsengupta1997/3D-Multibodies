@@ -92,12 +92,12 @@ class Model(BaseModel):
 
         # self.accuracy_metrics = AccuracyMetrics()
 
-        print("----- SPIN Layers to Optimize -----")
-        for name_s, param_s in self.model.named_parameters():
-            if param_s.requires_grad:
-                print(name_s)
+        # print("----- SPIN Layers to Optimize -----")
+        # for name_s, param_s in self.model.named_parameters():
+        #     if param_s.requires_grad:
+        #         print(name_s)
 
-        neutral_model_path = os.path.join(global_config.SMPL_MODEL_DIR, 'SMPL_NEUTRAL.pkl')
+        # neutral_model_path = os.path.join(global_config.SMPL_MODEL_DIR, 'SMPL_NEUTRAL.pkl')
         # self.smpl_mini = smpl.SMPL(neutral_model_path)
         # self.losses = Losses()
 

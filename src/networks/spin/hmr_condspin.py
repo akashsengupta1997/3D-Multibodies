@@ -411,19 +411,19 @@ class ConditionalHMR(nn.Module):
                         additive_noise = torch.randn_like(param_exp) * layer5_noise
                         param_exp = param_exp + additive_noise
 
-                        print(
-                            "<-- LOAD [EXPANDED] {0} into {1} [{2} into {3}] with noise {4}".format(
-                                name,
-                                layer5_name,
-                                param_exp.shape,
-                                own_state[layer5_name].shape,
-                                layer5_noise,
-                            )
-                        )
+                        # print(
+                        #     "<-- LOAD [EXPANDED] {0} into {1} [{2} into {3}] with noise {4}".format(
+                        #         name,
+                        #         layer5_name,
+                        #         param_exp.shape,
+                        #         own_state[layer5_name].shape,
+                        #         layer5_noise,
+                        #     )
+                        # )
 
                         own_state[layer5_name].copy_(param_exp)
                     else:
-                        print("<-- LOAD param {0} into {1}".format(name, layer5_name))
+                        # print("<-- LOAD param {0} into {1}".format(name, layer5_name))
                         own_state[layer5_name].copy_(param)
                         weights_to_freeze[layer5_name] = param
 
