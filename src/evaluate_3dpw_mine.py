@@ -11,7 +11,7 @@ import cv2
 
 import config
 from utils import constants
-from model import Model
+from model_mine import Model
 from experiment_config import ExperimentConfig
 from smpl import SMPL
 from utils.pose_utils import compute_similarity_transform_batch, scale_and_translation_transform_batch
