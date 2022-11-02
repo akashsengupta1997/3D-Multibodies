@@ -923,7 +923,8 @@ if __name__ == '__main__':
     for name, param in model_state_dict.items():
         try:
             own_state[name].copy_(param)
-        except:
+        except Exception as e:
+            print(e)
             print("Unable to load: {0}".format(name))
     model.eval()
 
