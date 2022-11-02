@@ -98,7 +98,7 @@ class Model(BaseModel):
                 print(name_s)
 
         neutral_model_path = os.path.join(global_config.SMPL_MODEL_DIR, 'SMPL_NEUTRAL.pkl')
-        self.smpl_mini = smpl.SMPL(neutral_model_path)
+        # self.smpl_mini = smpl.SMPL(neutral_model_path)
         self.losses = Losses()
 
     def forward(self, images, cache_mode=False):
@@ -118,22 +118,22 @@ class Model(BaseModel):
         # out_fpose_mode: (N, M, 24, 3, 3)
         out_fpose_mode = torch.cat([pred_global_rotmat, pred_rotmat], dim=2)
 
-        # Run all modes through SMPL, after compressing
-        # (N, M, ...) -> (N * M, ...)
-        out_fpose_mode_compressed = MinofN.compress_modes_into_batch(out_fpose_mode)
-        out_shape_compressed = MinofN.compress_modes_into_batch(pred_shape)
-        out_verts_mode, out_model_joints_mode, out_model_pelvis = self.smpl_mini(
-            out_fpose_mode_compressed,
-            out_shape_compressed,
-            run_mini=True)
-
-        out_fpose_mode_compressed_zero = out_fpose_mode_compressed.clone()
-        out_fpose_mode_compressed_zero[:, 0] = torch.eye(3).to(
-            out_fpose_mode_compressed_zero.device)
-        _, out_model_joints_mode_zero, _ = self.smpl_mini(
-            out_fpose_mode_compressed_zero,
-            out_shape_compressed,
-            run_mini=True)
+        # # Run all modes through SMPL, after compressing
+        # # (N, M, ...) -> (N * M, ...)
+        # out_fpose_mode_compressed = MinofN.compress_modes_into_batch(out_fpose_mode)
+        # out_shape_compressed = MinofN.compress_modes_into_batch(pred_shape)
+        # out_verts_mode, out_model_joints_mode, out_model_pelvis = self.smpl_mini(
+        #     out_fpose_mode_compressed,
+        #     out_shape_compressed,
+        #     run_mini=True)
+        #
+        # out_fpose_mode_compressed_zero = out_fpose_mode_compressed.clone()
+        # out_fpose_mode_compressed_zero[:, 0] = torch.eye(3).to(
+        #     out_fpose_mode_compressed_zero.device)
+        # _, out_model_joints_mode_zero, _ = self.smpl_mini(
+        #     out_fpose_mode_compressed_zero,
+        #     out_shape_compressed,
+        #     run_mini=True)
 
         # Convert Weak Perspective Camera [s, tx, ty] to camera translation [tx, ty, tz] in 3D given the bounding box size
         # This camera translation can be used in a full perspective projection
@@ -147,13 +147,13 @@ class Model(BaseModel):
         camera_rotation = torch.eye(3).unsqueeze(0).expand(
             batch_size * self.num_modes, -1, -1).to(device)
 
-        # (N * M, 49, 2)
-        projected_joints_mode = perspective_projection(
-            out_model_joints_mode + out_model_pelvis,
-            rotation=camera_rotation,
-            translation=pred_cam_t,
-            focal_length=self.focal_length,
-            camera_center=camera_center)
+        # # (N * M, 49, 2)
+        # projected_joints_mode = perspective_projection(
+        #     out_model_joints_mode + out_model_pelvis,
+        #     rotation=camera_rotation,
+        #     translation=pred_cam_t,
+        #     focal_length=self.focal_length,
+        #     camera_center=camera_center)
 
 
         # ######## Identfy and select the min-of-n modes ########
@@ -170,24 +170,24 @@ class Model(BaseModel):
         # else:
         #     minofn_mode_ids = mean_ids
 
-        out_model_joints_reshape = MinofN.decompress_modes_from_batch(
-            out_model_joints_mode, batch_size, self.num_modes)
-
-        out_verts_mode_reshape = MinofN.decompress_modes_from_batch(
-            out_verts_mode, batch_size, self.num_modes)
-
-        out_pelvis_mode_reshape = MinofN.decompress_modes_from_batch(
-            out_model_pelvis, batch_size, self.num_modes)
-
-        out_projected_joints_reshape = MinofN.decompress_modes_from_batch(
-            projected_joints_mode, batch_size, self.num_modes)
-
-        assert out_fpose_mode.shape[0] == \
-               pred_camera.shape[0] == \
-               pred_shape.shape[0] == \
-               out_verts_mode_reshape.shape[0] == \
-               out_model_joints_reshape.shape[0] == \
-               out_projected_joints_reshape.shape[0], "Batch sizes don't match"
+        # out_model_joints_reshape = MinofN.decompress_modes_from_batch(
+        #     out_model_joints_mode, batch_size, self.num_modes)
+        #
+        # out_verts_mode_reshape = MinofN.decompress_modes_from_batch(
+        #     out_verts_mode, batch_size, self.num_modes)
+        #
+        # out_pelvis_mode_reshape = MinofN.decompress_modes_from_batch(
+        #     out_model_pelvis, batch_size, self.num_modes)
+        #
+        # out_projected_joints_reshape = MinofN.decompress_modes_from_batch(
+        #     projected_joints_mode, batch_size, self.num_modes)
+        #
+        # assert out_fpose_mode.shape[0] == \
+        #        pred_camera.shape[0] == \
+        #        pred_shape.shape[0] == \
+        #        out_verts_mode_reshape.shape[0] == \
+        #        out_model_joints_reshape.shape[0] == \
+        #        out_projected_joints_reshape.shape[0], "Batch sizes don't match"
 
         preds = {}
 
@@ -322,12 +322,12 @@ class Model(BaseModel):
         #                         assert result_datum.shape[0] == batch_size, "Cache dataset should be of a single dataset type"
         #                         preds[result_name] = result_datum
 
-        preds['out_joints_mode'] = out_model_joints_reshape
-        preds['out_verts_mode'] = out_verts_mode_reshape
-        preds['out_pelvis_mode'] = out_pelvis_mode_reshape
+        # preds['out_joints_mode'] = out_model_joints_reshape
+        # preds['out_verts_mode'] = out_verts_mode_reshape
+        # preds['out_pelvis_mode'] = out_pelvis_mode_reshape
         preds['out_fpose_mode'] = out_fpose_mode
         preds['out_shape_mode'] = pred_shape
-        preds['out_projkps_mode'] = out_projected_joints_reshape
+        # preds['out_projkps_mode'] = out_projected_joints_reshape
         preds['out_cam_t'] = pred_cam_t.reshape(batch_size, self.num_modes, -1)
         preds['out_cam_wp'] = pred_camera
         preds['out_pose_rotmats'] = pred_rotmat
