@@ -127,10 +127,10 @@ def evaluate_3dpw(model,
         print('\nMODEL OUT')
         for key in pred:
             print(key, pred[key].shape)
-        return
+        print(pred['pred_camera'])
         pred_cam_wp = out['pred_cam'][:, 0, :]
 
-        pred_pose_rotmats_mode = out['pred_smpl_params']['body_pose'][:, 0, :, :, :]
+        pred_pose_rotmats_mode = pred['pred_smpl_params']['body_pose'][:, 0, :, :, :]
         pred_glob_rotmat_mode = out['pred_smpl_params']['global_orient'][:, 0, :, :, :]
         pred_shape_mode = out['pred_smpl_params']['betas'][:, 0, :]
 

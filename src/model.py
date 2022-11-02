@@ -164,8 +164,7 @@ class Model(BaseModel):
             run_mini = True)
 
         out_fpose_mode_compressed_zero = out_fpose_mode_compressed.clone()
-        out_fpose_mode_compressed_zero[:, 0] = torch.eye(3).to(
-            out_fpose_mode_compressed_zero.device)
+        out_fpose_mode_compressed_zero[:, 0] = torch.eye(3).to(out_fpose_mode_compressed_zero.device)
         _, out_model_joints_mode_zero, _ = self.smpl_mini(
             out_fpose_mode_compressed_zero,
             out_shape_compressed,
