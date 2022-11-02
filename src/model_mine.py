@@ -30,9 +30,33 @@ from utils.minofn import MinofN
 
 class Model(BaseModel):
     def __init__(self,
+                 loss_weights={
+                     'loss_joint': 25.0, 'loss_angle': 1.0, 'loss_shape': 0.001,
+                     'loss_skel2d': 1.0, 'loss_vertex': 0.0,
+                     'loss_nll': 1e-3, 'loss_nll_reg': 1e-3,
+                     'loss_skel2d_modewise': 0.1, 'loss_depth_modewise': 1.0
+                 },
                  num_modes=25,
                  init_flow="",
                  COND_HMR=get_default_args(ConditionalHMR),
+                 openpose_train_weight=0.0,
+                 gt_train_weight=1.0,
+                 log_vars=[
+                     'objective',
+                     'loss_nll', 'loss_nll_reg',
+                     'loss_joint', 'loss_angle', 'loss_shape',
+                     'loss_skel2d', 'loss_skel2d_modewise', 'loss_vertex',
+                     'acc_h36m_M01_mpjpe',
+                     'acc_h36m_M05_mpjpe',
+                     'acc_h36m_WM05_mpjpe',
+                     'acc_h36m_M10_mpjpe',
+                     'acc_h36m_WM10_mpjpe',
+                     'acc_h36m_M25_mpjpe',
+                     'acc_h36m_WM25_mpjpe',
+                     'acc_h36m_M100_mpjpe',
+                     'dur_acc', 'dur_flow', 'dur_hmr', 'dur_losses',
+                     'dur_minofn', 'dur_smpl'
+                 ],
                  **kwargs):
 
         auto_init_args(self)
