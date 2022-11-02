@@ -196,6 +196,8 @@ class HMR_CondSpin(nn.Module):
         x3 = self.layer3(x2)
         x4 = self.layer4(x3)  # SPIN prediction
         x5 = self.layer5(x3)  # Multi-modes: Needs to be unfrozen for M>1
+        print('x4', x4.shape, torch.isnan(x4).sum())
+        print('x5', x5.shape, torch.isnan(x5).sum())
 
         xf_spin = self.avgpool(x4).view(batch_size, 1, -1)
         xf_extra = self.avgpool(x5).view(batch_size, self.num_modes, -1)

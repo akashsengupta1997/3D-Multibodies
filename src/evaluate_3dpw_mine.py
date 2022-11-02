@@ -128,7 +128,8 @@ def evaluate_3dpw(model,
         for key in pred:
             print('\n', key)
             print(pred[key].shape, pred[key].numel(), torch.isnan(pred[key]).sum())
-        print(pred['pred_camera'])
+
+        return
         pred_cam_wp = out['pred_cam'][:, 0, :]
 
         pred_pose_rotmats_mode = pred['pred_smpl_params']['body_pose'][:, 0, :, :, :]
