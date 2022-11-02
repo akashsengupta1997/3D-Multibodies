@@ -1,9 +1,9 @@
 import torch
-# from torch.nn import Parameter
-# import torch.nn as nn
-# import torch.nn.functional as F
-# import torchvision
-# import numpy as np
+from torch.nn import Parameter
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+import numpy as np
 #
 # import time
 
@@ -14,7 +14,7 @@ from exp_manager.config import get_default_args
 import os
 # import networks.smpl.smpl as smpl
 from networks.spin import ConditionalHMR
-# from networks.benvp.benvp import RealNVP
+from networks.benvp.benvp import RealNVP
 # import torchgeometry as tgm
 
 # from losses import Losses
@@ -69,22 +69,22 @@ class Model(BaseModel):
         num_transformations = 20
         dropout = 0.2
 
-        # self.num_dims_flow = d
+        self.num_dims_flow = d
 
-        # prior_mean = torch.zeros(d)
-        # prior_var = torch.eye(d)
-        # masks = (torch.rand(num_transformations, d) < 0.5).float()
-        # nets = lambda: nn.Sequential(
-        #     nn.Linear(d, n_hidden), nn.Dropout(dropout), nn.LeakyReLU(),
-        #     nn.Linear(n_hidden, n_hidden), nn.Dropout(dropout), nn.LeakyReLU(),
-        #     nn.Linear(n_hidden, d), nn.Tanh())
-        #
-        # nett = lambda: nn.Sequential(
-        #     nn.Linear(d, n_hidden), nn.Dropout(dropout), nn.LeakyReLU(),
-        #     nn.Linear(n_hidden, n_hidden), nn.Dropout(dropout), nn.LeakyReLU(),
-        #     nn.Linear(n_hidden, d))
+        prior_mean = torch.zeros(d)
+        prior_var = torch.eye(d)
+        masks = (torch.rand(num_transformations, d) < 0.5).float()
+        nets = lambda: nn.Sequential(
+            nn.Linear(d, n_hidden), nn.Dropout(dropout), nn.LeakyReLU(),
+            nn.Linear(n_hidden, n_hidden), nn.Dropout(dropout), nn.LeakyReLU(),
+            nn.Linear(n_hidden, d), nn.Tanh())
 
-        # self.model_realnvp = RealNVP(nets, nett, masks, prior_mean, prior_var)
+        nett = lambda: nn.Sequential(
+            nn.Linear(d, n_hidden), nn.Dropout(dropout), nn.LeakyReLU(),
+            nn.Linear(n_hidden, n_hidden), nn.Dropout(dropout), nn.LeakyReLU(),
+            nn.Linear(n_hidden, d))
+
+        self.model_realnvp = RealNVP(nets, nett, masks, prior_mean, prior_var)
         self.model = ConditionalHMR(
             num_modes,
             num_transformations,
