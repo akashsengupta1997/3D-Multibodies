@@ -33,7 +33,7 @@ class Renderer:
         return rend_imgs
 
     def __call__(self, vertices, camera_translation, image,
-                 angle=None, axis=None):
+                 angle=None, axis=None, flip_updown=True):
         material = pyrender.MetallicRoughnessMaterial(
             metallicFactor=0.2,
             alphaMode='OPAQUE',
@@ -42,9 +42,10 @@ class Renderer:
         camera_translation[0] *= -1.
 
         mesh = trimesh.Trimesh(vertices, self.faces)
-        rot = trimesh.transformations.rotation_matrix(
-            np.radians(180), [1, 0, 0])
-        mesh.apply_transform(rot)
+        if flip_updown:
+            rot = trimesh.transformations.rotation_matrix(
+                np.radians(180), [1, 0, 0])
+            mesh.apply_transform(rot)
         if angle is not None:
             # Apply given mesh rotation to the mesh - useful for rendering from different views
             R = trimesh.transformations.rotation_matrix(angle, axis)

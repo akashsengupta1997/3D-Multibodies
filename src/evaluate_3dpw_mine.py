@@ -133,9 +133,9 @@ def evaluate_3dpw(model,
 
         # ------------------------------- PREDICTIONS -------------------------------
         pred = model(input)
-        print('\nMODEL OUT')
-        for key in pred:
-            print(key, pred[key].shape, pred[key].numel(), torch.isnan(pred[key]).sum().cpu().detach().numpy())
+        # print('\nMODEL OUT')
+        # for key in pred:
+        #     print(key, pred[key].shape, pred[key].numel(), torch.isnan(pred[key]).sum().cpu().detach().numpy())
 
         # SPIN predictions as mode
         pred_cam_wp_spin = pred['spin_camera']
@@ -462,12 +462,14 @@ def evaluate_3dpw(model,
 
             reposed_body_vis_rgb_spin = renderer(vertices=pred_reposed_vertices_spin[0],
                                                  camera_translation=reposed_cam_t.copy(),
-                                                 image=np.zeros_like(vis_img[0]))
+                                                 image=np.zeros_like(vis_img[0]),
+                                                 flip_updown=False)
             reposed_body_vis_rgb_mean_rot = renderer(vertices=pred_reposed_vertices_spin[0],
                                                      camera_translation=reposed_cam_t.copy(),
                                                      image=np.zeros_like(vis_img[0]),
                                                      angle=np.pi / 2.,
-                                                     axis=[0., 1., 0.])
+                                                     axis=[0., 1., 0.],
+                                                     flip_updown=False)
 
             body_vis_rgb_samples = []
             body_vis_rgb_rot_samples = []
