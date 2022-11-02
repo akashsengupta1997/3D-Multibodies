@@ -921,9 +921,11 @@ if __name__ == '__main__':
     model_state_dict, stats_load, optimizer_state = load_model(model_path)
     own_state = model.state_dict()
 
+    print('\nMODEL STATE DICT')
     for name, param in model_state_dict.items():
         print(name, param.shape)
 
+    print('\nOWN STATE DICT')
     for name, param in own_state.item():
         print(name, param.shape)
 
