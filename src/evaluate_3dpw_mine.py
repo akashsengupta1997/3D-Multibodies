@@ -22,6 +22,7 @@ from datasets.my_3dpw_eval_dataset import PW3DEvalDataset
 
 from exp_manager.config import get_config_from_file, get_arg_parser, set_config
 from exp_manager.utils import pprint_dict
+from exp_manager.model_io import  load_model
 
 import subsets
 
@@ -888,6 +889,7 @@ def evaluate_3dpw(model,
 if __name__ == '__main__':
     parser_mine = argparse.ArgumentParser()
     parser_mine.add_argument('--exp_dir', type=str, default='../data/pretrained/standard')
+    parser_mine.add_argument('--checkpoint_fname', type=str, default='model_epoch_00000003.pth')
     parser_mine.add_argument('--gpu', default='0', type=str, help='GPU')
     parser_mine.add_argument('--num_samples', '-N', type=int, default=25, help='Number of test samples to evaluate with')
     parser_mine.add_argument('--use_subset', '-S',action='store_true')
@@ -914,10 +916,15 @@ if __name__ == '__main__':
     parsed = parser.parse_args()
     set_config(exp.cfg, vars(parsed))
     pprint_dict(exp.cfg)
-    print('HERERdfasfd', exp.cfg.exp_dir)
     model = Model(**exp.cfg.MODEL).to(device)
-    # model_path =
-    # model_state_dict, stats_load, optimizer_state = load_model(model_path)
+    model_path = os.path.join(args.exp_dir, args.checkpoint_fname)
+    model_state_dict, stats_load, optimizer_state = load_model(model_path)
+    own_state = model.state_dict()
+    for name, param in model_state_dict.items():
+        try:
+            own_state[name].copy_(param)
+        except:
+            print("Unable to load: {0}".format(name))
     model.eval()
 
     # Setup evaluation dataset
