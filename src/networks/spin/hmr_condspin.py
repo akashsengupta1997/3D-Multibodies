@@ -199,7 +199,8 @@ class HMR_CondSpin(nn.Module):
 
         xf_spin = self.avgpool(x4).view(batch_size, 1, -1)
         xf_extra = self.avgpool(x5).view(batch_size, self.num_modes, -1)
-
+        print(xf_spin)
+        print(xf_extra)
         return xf_spin, xf_extra
 
     def decode_smpl(
