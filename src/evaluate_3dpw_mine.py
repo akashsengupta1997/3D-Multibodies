@@ -921,8 +921,8 @@ if __name__ == '__main__':
     model_state_dict, stats_load, optimizer_state = load_model(model_path)
     own_state = model.state_dict()
     for name, param in model_state_dict.items():
+        print('\n', name, param.shape, own_state[name].shape)
         try:
-            print('\n', name, param.shape, own_state[name].shape)
             own_state[name].copy_(param)
         except Exception as e:
             print(e)
