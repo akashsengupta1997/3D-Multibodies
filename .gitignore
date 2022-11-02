@@ -122,3 +122,7 @@ src/results/
 
 # ignore prior.py from smplify-x repo
 smplify/prior.py
+*.iml
+*.xml
+
+.idea*

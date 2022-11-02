@@ -32,7 +32,8 @@ class Renderer:
         rend_imgs = make_grid(rend_imgs, nrow=2)
         return rend_imgs
 
-    def __call__(self, vertices, camera_translation, image):
+    def __call__(self, vertices, camera_translation, image,
+                 angle=None, axis=None):
         material = pyrender.MetallicRoughnessMaterial(
             metallicFactor=0.2,
             alphaMode='OPAQUE',
@@ -44,6 +45,10 @@ class Renderer:
         rot = trimesh.transformations.rotation_matrix(
             np.radians(180), [1, 0, 0])
         mesh.apply_transform(rot)
+        if angle is not None:
+            # Apply given mesh rotation to the mesh - useful for rendering from different views
+            R = trimesh.transformations.rotation_matrix(angle, axis)
+            mesh.apply_transform(R)
         mesh = pyrender.Mesh.from_trimesh(mesh, material=material)
 
         scene = pyrender.Scene(ambient_light=(0.5, 0.5, 0.5))

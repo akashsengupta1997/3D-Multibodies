@@ -96,6 +96,8 @@ H36M_TO_J14 = H36M_TO_J17[:14]
 # Indices to get the 14 LSP joints from the ground truth joints
 J24_TO_J17 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 14, 16, 17]
 J24_TO_J14 = J24_TO_J17[:14]
+# Indices to get the 17 COCO joints from the SMPL joints
+SMPL_JOINTS_TO_COCO_MAP = [24, 26, 25, 28, 27, 16, 17, 18, 19, 20, 21, 1, 2, 4, 5, 7, 8]  # Using OP Hips
 
 # Permutation of SMPL pose parameters when flipping the shape
 SMPL_JOINTS_FLIP_PERM = [0, 2, 1, 3, 5, 4, 6, 8, 7, 9, 11, 10, 12, 14, 13, 15, 17, 16, 19, 18, 21, 20, 23, 22]

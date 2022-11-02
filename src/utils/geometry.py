@@ -186,3 +186,15 @@ def estimate_translation(S, joints_2d, focal_length=5000., img_size=224.):
         conf_i = joints_conf[i]
         trans[i] = estimate_translation_np(S_i, joints_i, conf_i, focal_length=focal_length, img_size=img_size)
     return torch.from_numpy(trans).to(device)
+
+
+def undo_keypoint_normalisation(normalised_keypoints, img_wh):
+    """
+    Converts normalised keypoints from [-1, 1] space to pixel space i.e. [0, img_wh]
+    """
+    keypoints = (normalised_keypoints + 1) * (img_wh/2.0)
+    return keypoints
+
+def convert_weak_perspective_to_camera_translation(cam_wp, focal_length, resolution):
+    cam_t = np.array([cam_wp[1], cam_wp[2], 2 * focal_length / (resolution * cam_wp[0] + 1e-9)])
+    return cam_t

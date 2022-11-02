@@ -71,4 +71,24 @@ def reconstruction_error(S1, S2, reduction='mean'):
     elif reduction == 'sum':
         re = re.sum()
     return re
-             
+
+def scale_and_translation_transform_batch(P, T):
+    """
+    First Normalises batch of input 3D meshes P such that each mesh has mean (0, 0, 0) and
+    RMS distance from mean = 1.
+    Then transforms P such that it has the same mean and RMSD as T.
+    :param P: (batch_size, N, 3) batch of N 3D meshes to transform.
+    :param T: (batch_size, N, 3) batch of N reference 3D meshes.
+    :return: P transformed
+    """
+    P_mean = np.mean(P, axis=1, keepdims=True)
+    P_trans = P - P_mean
+    P_scale = np.sqrt(np.sum(P_trans ** 2, axis=(1, 2), keepdims=True) / P.shape[1])
+    P_normalised = P_trans / P_scale
+
+    T_mean = np.mean(T, axis=1, keepdims=True)
+    T_scale = np.sqrt(np.sum((T - T_mean) ** 2, axis=(1, 2), keepdims=True) / P.shape[1])
+
+    P_transformed = P_normalised * T_scale + T_mean
+
+    return P_transformed
