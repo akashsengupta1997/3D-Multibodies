@@ -6,23 +6,23 @@ Things you need to change: *_ROOT that indicate the path to each dataset
 from os.path import join
 
 
-base_dir = "/datasets/people_data"
+# base_dir = "/datasets/people_data"
 IMG_RES = 224
 
-H36M_ROOT = join(base_dir, "human36m")
-LSP_ROOT = join(base_dir, "lsp")
-LSP_ORIGINAL_ROOT = join(base_dir, "lsp_original")
-LSPET_ROOT = join(base_dir, "hr-lspet")
-MPII_ROOT = join(base_dir, "mpii")
-COCO_ROOT = join(base_dir, "coco2014")
-MPI_INF_3DHP_ROOT = join(base_dir, "mpi_inf_3dhp")
-PW3D_ROOT = join(base_dir, "3dpw")
-UPI_S1H_ROOT = join(base_dir, "upi-s1h-v2")
-
-SPIN_ROOT = join(base_dir, "spin_fits")
+# H36M_ROOT = join(base_dir, "human36m")
+# LSP_ROOT = join(base_dir, "lsp")
+# LSP_ORIGINAL_ROOT = join(base_dir, "lsp_original")
+# LSPET_ROOT = join(base_dir, "hr-lspet")
+# MPII_ROOT = join(base_dir, "mpii")
+# COCO_ROOT = join(base_dir, "coco2014")
+# MPI_INF_3DHP_ROOT = join(base_dir, "mpi_inf_3dhp")
+# PW3D_ROOT = join(base_dir, "3dpw")
+# UPI_S1H_ROOT = join(base_dir, "upi-s1h-v2")
+#
+# SPIN_ROOT = join(base_dir, "spin_fits")
 
 # Output folder to save test/train npz files
-BASE_FOLDER = "/scratch/code/3D-Multibodies"
+BASE_FOLDER = "/scratch/as2562/3D-Multibodies"
 DATASET_NPZ_PATH = join(BASE_FOLDER, "data/dataset_extras")
 CROP_NPZ_PATH = join(BASE_FOLDER, "data/crops")
 
@@ -64,20 +64,20 @@ CROP_FILES = {
     "3dpw": join(CROP_NPZ_PATH, "3dpw_amb3.npz"),
 }
 
-DATASET_FOLDERS = {
-    "h36m": H36M_ROOT,
-    "h36m-p1": H36M_ROOT,
-    "h36m-p1-corr": H36M_ROOT,
-    "h36m-p2": H36M_ROOT,
-    "lsp-orig": LSP_ORIGINAL_ROOT,
-    "lsp": LSP_ROOT,
-    "lspet": LSPET_ROOT,
-    "mpi-inf-3dhp": MPI_INF_3DHP_ROOT,
-    "mpii": MPII_ROOT,
-    "coco": COCO_ROOT,
-    "3dpw": PW3D_ROOT,
-    "upi-s1h": UPI_S1H_ROOT,
-}
+# DATASET_FOLDERS = {
+#     "h36m": H36M_ROOT,
+#     "h36m-p1": H36M_ROOT,
+#     "h36m-p1-corr": H36M_ROOT,
+#     "h36m-p2": H36M_ROOT,
+#     "lsp-orig": LSP_ORIGINAL_ROOT,
+#     "lsp": LSP_ROOT,
+#     "lspet": LSPET_ROOT,
+#     "mpi-inf-3dhp": MPI_INF_3DHP_ROOT,
+#     "mpii": MPII_ROOT,
+#     "coco": COCO_ROOT,
+#     "3dpw": PW3D_ROOT,
+#     "upi-s1h": UPI_S1H_ROOT,
+# }
 
 DATASET_DICT = {
     "h36m": 0,
