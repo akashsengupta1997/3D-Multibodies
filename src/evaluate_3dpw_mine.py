@@ -930,7 +930,7 @@ if __name__ == '__main__':
     #     print(name, param.shape)
 
     for name, param in model_state_dict.items():
-        print('\n', name, name[7:], param.shape, own_state[name[7:]].shape)
+        # print('\n', name, name[7:], param.shape, own_state[name[7:]].shape)
         try:
             own_state[name[7:]].copy_(param)
         except Exception as e:
