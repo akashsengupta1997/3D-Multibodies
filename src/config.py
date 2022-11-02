@@ -110,6 +110,6 @@ SMPL_MODEL_DIR = join(BASE_FOLDER, "data/smpl")
 SPIN_FITS_DIR = join(BASE_FOLDER, "data/spin_fits")
 HMR_PRETRAINED = join(BASE_FOLDER, "data/pretrained/model_checkpoint.pt")
 
-J_REGRESSOR_EXTRA = 'data/J_regressor_extra.npy'
-COCOPLUS_REGRESSOR = 'data/cocoplus_regressor.npy'
-H36M_REGRESSOR = 'data/J_regressor_h36m.npy'
+J_REGRESSOR_EXTRA = join(BASE_FOLDER,'data/J_regressor_extra.npy')
+COCOPLUS_REGRESSOR = join(BASE_FOLDER,'data/cocoplus_regressor.npy')
+H36M_REGRESSOR = join(BASE_FOLDER,'data/J_regressor_h36m.npy')
