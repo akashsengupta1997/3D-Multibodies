@@ -889,15 +889,15 @@ def evaluate_3dpw(model,
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_dir', type=str, default='../data/pretrained/standard')
-    parser.add_argument('--gpu', default='0', type=str, help='GPU')
-    parser.add_argument('--num_samples', '-N', type=int, default=25, help='Number of test samples to evaluate with')
-    parser.add_argument('--use_subset', '-S',action='store_true')
-    parser.add_argument('--extreme_crop', '-C', action='store_true')
-    parser.add_argument('--extreme_crop_scale', '-CS', type=float, default=0.5)
+    parser_mine = argparse.ArgumentParser()
+    parser_mine.add_argument('--exp_dir', type=str, default='../data/pretrained/standard')
+    parser_mine.add_argument('--gpu', default='0', type=str, help='GPU')
+    parser_mine.add_argument('--num_samples', '-N', type=int, default=25, help='Number of test samples to evaluate with')
+    parser_mine.add_argument('--use_subset', '-S',action='store_true')
+    parser_mine.add_argument('--extreme_crop', '-C', action='store_true')
+    parser_mine.add_argument('--extreme_crop_scale', '-CS', type=float, default=0.5)
 
-    args = parser.parse_args()
+    args = parser_mine.parse_args()
 
     # Set seeds
     np.random.seed(0)
@@ -911,11 +911,10 @@ if __name__ == '__main__':
     # Model
     exp = ExperimentConfig()
     cfg_file = os.path.join(args.exp_dir, "expconfig.yaml")
-    if os.path.exists(cfg_file):
-        cfg_load = get_config_from_file(cfg_file)
-        print("<- Loaded base config settings from: {0}".format(cfg_file))
-        parser = get_arg_parser(type(exp), default=cfg_load)
-        parsed = parser.parse_args()
+    cfg_load = get_config_from_file(cfg_file)
+    print("<- Loaded base config settings from: {0}".format(cfg_file))
+    parser = get_arg_parser(type(exp), default=cfg_load)
+    parsed = parser.parse_args()
     set_config(exp.cfg, vars(parsed))
     pprint_dict(exp.cfg)
     model = Model(**exp.cfg.MODEL).to(device)
