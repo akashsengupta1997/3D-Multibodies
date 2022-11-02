@@ -102,8 +102,15 @@ def evaluate_3dpw(model,
         target_pose = samples_batch['pose'].to(device)
         target_shape = samples_batch['shape'].to(device)
         target_gender = samples_batch['gender'][0]
-        target_joints2D_coco = samples_batch['joints2D_coco']
-        target_joints2D_vis_coco = samples_batch['joints2D_coco_vis']
+
+        hrnet_joints2D_coco = samples_batch['hrnet_kps']
+        hrnet_joints2D_vis_coco = samples_batch['hrnet_kps_vis']
+        hrnet_joints2D_vis_coco = check_joints2d_visibility_torch(hrnet_joints2D_coco,
+                                                                  input.shape[-1],
+                                                                  vis=hrnet_joints2D_vis_coco)  # (batch_size, 17)
+
+        target_joints2D_coco = samples_batch['gt_kps']
+        target_joints2D_vis_coco = samples_batch['gt_kps_vis']
         target_joints2D_vis_coco = check_joints2d_visibility_torch(target_joints2D_coco,
                                                                    input.shape[-1],
                                                                    vis=target_joints2D_vis_coco)  # (batch_size, 17)
@@ -140,7 +147,7 @@ def evaluate_3dpw(model,
                                              betas=pred_shape_spin,
                                              pose2rot=False)
         pred_vertices_spin = pred_smpl_output_spin.vertices  # (1, 6890, 3)
-        pred_joints_h36mlsp_spin = pred_smpl_output_spin.joints[:, constants.ALL_JOINTS_TO_H36M_MAP, :][:, constants.H36M_TO_J14, :]  # (1, 14, 3)
+        pred_joints_h36mlsp_spin = pred_smpl_output_spin.joints[:, constants.ALL_JOINTS_TO_H36M_MAP, :][:, config.H36M_TO_J14, :]  # (1, 14, 3)
         pred_joints_coco_spin = pred_smpl_output_spin.joints[:, constants.ALL_JOINTS_TO_COCO_MAP, :]  # (1, 17, 3)
         pred_vertices2D_spin_for_vis = orthographic_project_torch(pred_vertices_spin,
                                                                   pred_cam_wp_spin,

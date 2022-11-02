@@ -1,27 +1,29 @@
 import cv2
 import numpy as np
 import os
+import pickle
 import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import Normalize
 
-from utils import constants
 from utils.imutils import batch_crop_opencv_affine
 
 
 class PW3DEvalDataset(Dataset):
     def __init__(self,
                  pw3d_dir_path,
-                 img_wh,
+                 img_wh=224,
                  vis_img_wh=512,
+                 visible_joints_threshold=0.6,
+                 gt_visible_joints_threhshold=0.6,
                  selected_fnames=None,
                  extreme_crop=False,
-                 extreme_crop_scale=None,
-                 gt_visible_joints_threshold=0.6):
+                 extreme_crop_scale=None):
         super(PW3DEvalDataset, self).__init__()
 
         # Paths
-        cropped_frames_dir = os.path.join(pw3d_dir_path, 'cropped_frames')
+        self.cropped_frames_dir = os.path.join(pw3d_dir_path, 'cropped_frames')
+        self.hrnet_kps_dir = os.path.join(pw3d_dir_path, 'hrnet_results_centred', 'keypoints')
 
         # Data
         data = np.load(os.path.join(pw3d_dir_path, '3dpw_test2.npz'))
@@ -41,13 +43,14 @@ class PW3DEvalDataset(Dataset):
             self.pose = self.pose[chosen_indices]
             self.shape = self.shape[chosen_indices]
             self.gender = self.gender[chosen_indices]
+            self.joints2D_coco = self.joints2D_coco[chosen_indices]
 
-        self.gt_visible_joints_threshold = gt_visible_joints_threshold
-        self.cropped_frames_dir = cropped_frames_dir
         self.img_wh = img_wh
         self.vis_img_wh = vis_img_wh
-        self.normalize_img = Normalize(mean=constants.IMG_NORM_MEAN,
-                                       std=constants.IMG_NORM_STD)
+        self.visible_joints_threshold = visible_joints_threshold
+        self.gt_visible_joints_threhshold = gt_visible_joints_threhshold
+        self.normalize_img = Normalize(mean=[0.485, 0.456, 0.406],
+                                       std=[0.229, 0.224, 0.225])
 
         self.extreme_crop = extreme_crop
         self.extreme_crop_scale = extreme_crop_scale
@@ -71,8 +74,8 @@ class PW3DEvalDataset(Dataset):
         orig_img = cv2.cvtColor(cv2.imread(frame_path), cv2.COLOR_BGR2RGB)
         orig_height, orig_width = orig_img.shape[:2]
         img = cv2.resize(orig_img, (self.img_wh, self.img_wh), interpolation=cv2.INTER_LINEAR)
-        img = np.transpose(img, [2, 0, 1])/255.0
-        vis_img = cv2.resize(orig_img, (self.vis_img_wh, self.vis_img_wh), interpolation=cv2.INTER_LINEAR) / 255.0
+        img = np.transpose(img, [2, 0, 1]) / 255.0
+
         if self.extreme_crop:
             img = batch_crop_opencv_affine(output_wh=(self.img_wh, self.img_wh),
                                            num_to_crop=1,
@@ -80,6 +83,9 @@ class PW3DEvalDataset(Dataset):
                                            bbox_centres=self.extreme_bbox_centre,
                                            bbox_whs=self.extreme_bbox_wh,
                                            orig_scale_factor=1.)['rgb'][0]
+
+        vis_img = cv2.resize(np.transpose(img, [1, 2, 0]),
+                             (self.vis_img_wh, self.vis_img_wh), interpolation=cv2.INTER_LINEAR)
 
         # Targets
         pose = self.pose[index]
@@ -97,8 +103,24 @@ class PW3DEvalDataset(Dataset):
                                                      bbox_centres=self.extreme_bbox_centre,
                                                      bbox_whs=self.extreme_bbox_wh,
                                                      orig_scale_factor=1.)['joints2D'][0]
-        joints2D_coco_vis = joints2D_coco_conf > self.gt_visible_joints_threshold
+        joints2D_coco_vis = joints2D_coco_conf > self.gt_visible_joints_threhshold
         joints2D_coco_vis[[1, 2, 3, 4]] = joints2D_coco_conf[[1, 2, 3, 4]] > 0.1  # Different threshold for these because confidences are generally very low for GT 2D keypoints.
+
+        hrnet_kps_path = os.path.join(self.hrnet_kps_dir, os.path.splitext(fname)[0] + '.npy')
+        hrnet_kps = np.load(hrnet_kps_path)
+        hrnet_kps_confidence = hrnet_kps[:, 2]  # (17,)
+        hrnet_kps = hrnet_kps[:, :2]
+        hrnet_kps = hrnet_kps * np.array([self.img_wh / float(orig_width),
+                                          self.img_wh / float(orig_height)])
+        hrnet_kps_vis_flag = hrnet_kps_confidence > self.visible_joints_threshold
+        hrnet_kps_vis_flag[[0, 1, 2, 3, 4, 5, 6, 11, 12]] = True  # Only removing joints [7, 8, 9, 10, 13, 14, 15, 16] if occluded
+        if self.extreme_crop:
+            hrnet_kps = batch_crop_opencv_affine(output_wh=(self.img_wh, self.img_wh),
+                                                 num_to_crop=1,
+                                                 joints2D=hrnet_kps[None, :, :2],
+                                                 bbox_centres=self.extreme_bbox_centre,
+                                                 bbox_whs=self.extreme_bbox_wh,
+                                                 orig_scale_factor=1.)['joints2D'][0]
 
         img = torch.from_numpy(img).float()
         pose = torch.from_numpy(pose).float()
@@ -110,8 +132,10 @@ class PW3DEvalDataset(Dataset):
                 'vis_img': vis_img,
                 'pose': pose,
                 'shape': shape,
-                'joints2D_coco': joints2D_coco,
-                'joints2D_coco_vis': joints2D_coco_vis,
+                'hrnet_kps': hrnet_kps,
+                'hrnet_kps_vis': hrnet_kps_vis_flag,
+                'gt_kps': joints2D_coco,
+                'gt_kps_vis': joints2D_coco_vis,
                 'fname': fname,
                 'gender': gender}
 
