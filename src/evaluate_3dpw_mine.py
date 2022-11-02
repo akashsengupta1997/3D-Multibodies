@@ -915,20 +915,11 @@ if __name__ == '__main__':
     parser = get_arg_parser(type(exp), default=cfg_load)
     parsed = parser.parse_args()
     set_config(exp.cfg, vars(parsed))
-    pprint_dict(exp.cfg)
+    # pprint_dict(exp.cfg)
     model = Model(**exp.cfg.MODEL).to(device)
     model_path = os.path.join(args.exp_dir, args.checkpoint_fname)
     model_state_dict, stats_load, optimizer_state = load_model(model_path)
     own_state = model.state_dict()
-
-    # print('\nMODEL STATE DICT')
-    # for name, param in model_state_dict.items():
-    #     print(name, param.shape)
-    #
-    # print('\nOWN STATE DICT')
-    # for name, param in own_state.items():
-    #     print(name, param.shape)
-
     for name, param in model_state_dict.items():
         # print('\n', name, name[7:], param.shape, own_state[name[7:]].shape)
         try:
