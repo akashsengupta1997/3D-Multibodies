@@ -60,6 +60,7 @@ def save_model(model,stats,fl,optimizer=None,cfg=None):
     pickle.dump((stats,cfg),open(flstats,'wb'))
 
 def load_model(fl):
+    print(f'\n\n\n\n----------------------- HERE LOADING MODEL!! {fl}---------------\n\n\n\n')
     flstats = get_stats_path(fl)    
     flmodel = get_model_path(fl)
     flopt   = get_optimizer_path(fl)

@@ -335,7 +335,6 @@ class Experiment(BaseExperiment):
             if force_load or cfg.resume:
                 print("   -> resuming")
                 model_state_dict, stats_load, optimizer_state = load_model(model_path)
-                print('\n\n\n\n----------------------- HERE LOADING MODEL!! ---------------\n\n\n\n')
                 if not clear_stats:
                     stats = stats_load
                 else:
