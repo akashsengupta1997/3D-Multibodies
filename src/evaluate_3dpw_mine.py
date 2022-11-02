@@ -99,13 +99,8 @@ def evaluate_3dpw(model,
         target_pose = samples_batch['pose'].to(device)
         target_shape = samples_batch['shape'].to(device)
         target_gender = samples_batch['gender'][0]
-        hrnet_joints2D_coco = samples_batch['hrnet_kps']
-        hrnet_joints2D_vis_coco = samples_batch['hrnet_kps_vis']
-        hrnet_joints2D_vis_coco = check_joints2d_visibility_torch(hrnet_joints2D_coco,
-                                                                  input.shape[-1],
-                                                                  vis=hrnet_joints2D_vis_coco)  # (batch_size, 17)
-        target_joints2D_coco = samples_batch['gt_kps']
-        target_joints2D_vis_coco = samples_batch['gt_kps_vis']
+        target_joints2D_coco = samples_batch['joints2D_coco']
+        target_joints2D_vis_coco = samples_batch['joints2D_coco_vis']
         target_joints2D_vis_coco = check_joints2d_visibility_torch(target_joints2D_coco,
                                                                    input.shape[-1],
                                                                    vis=target_joints2D_vis_coco)  # (batch_size, 17)
