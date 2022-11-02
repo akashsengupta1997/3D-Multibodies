@@ -15,7 +15,7 @@ class PW3DEvalDataset(Dataset):
                  img_wh=224,
                  vis_img_wh=512,
                  visible_joints_threshold=0.6,
-                 gt_visible_joints_threhshold=0.6,
+                 gt_visible_joints_threshold=0.6,
                  selected_fnames=None,
                  extreme_crop=False,
                  extreme_crop_scale=None):
@@ -48,7 +48,7 @@ class PW3DEvalDataset(Dataset):
         self.img_wh = img_wh
         self.vis_img_wh = vis_img_wh
         self.visible_joints_threshold = visible_joints_threshold
-        self.gt_visible_joints_threhshold = gt_visible_joints_threhshold
+        self.gt_visible_joints_threhshold = gt_visible_joints_threshold
         self.normalize_img = Normalize(mean=[0.485, 0.456, 0.406],
                                        std=[0.229, 0.224, 0.225])
 
