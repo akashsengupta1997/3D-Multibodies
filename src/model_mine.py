@@ -106,9 +106,9 @@ class Model(BaseModel):
         device = images.device
 
         hmr_pred = self.model(images)
-        print('\nHMR PRED')
-        for key in hmr_pred:
-            print(key, hmr_pred[key].shape)
+        # print('\nHMR PRED')
+        # for key in hmr_pred:
+        #     print(key, hmr_pred[key].shape)
 
         return hmr_pred
 
