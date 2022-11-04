@@ -27,7 +27,7 @@ from exp_manager.utils import pprint_dict
 from exp_manager.model_io import load_model
 
 import subsets
-# TODO silhouettes
+
 
 def evaluate_ssp3d(model,
                    eval_dataset,
@@ -89,7 +89,8 @@ def evaluate_ssp3d(model,
     if save_per_frame_uncertainty:
         vertices_uncertainty_per_frame = []
 
-    renderer = Renderer(img_res=vis_img_wh, faces=smpl_neutral.faces)
+    renderer_for_silh_eval = Renderer(img_res=constants.IMG_RES, faces=smpl_neutral.faces)
+    renderer_for_vis = Renderer(img_res=vis_img_wh, faces=smpl_neutral.faces)
     reposed_cam_t = convert_weak_perspective_to_camera_translation(cam_wp=np.array([0.85, 0., -0.2]),
                                                                    focal_length=constants.FOCAL_LENGTH,
                                                                    resolution=vis_img_wh)
@@ -151,7 +152,6 @@ def evaluate_ssp3d(model,
                                                                     pred_cam_wp_spin,
                                                                     scale_first=False)  # (1, 17, 2)
         pred_joints2D_coco_spin = undo_keypoint_normalisation(pred_joints2D_coco_spin_normed, input.shape[-1])
-        pred_joints2D_coco_spin_for_vis = undo_keypoint_normalisation(pred_joints2D_coco_spin_normed, vis_img_wh)
         pred_reposed_vertices_spin = smpl_neutral(betas=pred_shape_spin).vertices  # (1, 6890, 3)
 
         pred_cam_wp_samples = pred['pred_camera'][0]  # (num_samples, 3)
@@ -164,7 +164,6 @@ def evaluate_ssp3d(model,
                                                 betas=pred_shape_samples,
                                                 pose2rot=False)
         pred_vertices_samples = pred_smpl_output_samples.vertices  # (num_pred_samples, 6890, 3)
-        pred_joints_h36mlsp_samples = pred_smpl_output_samples.joints[:, constants.ALL_JOINTS_TO_H36M_MAP, :][:, constants.H36M_TO_J14, :]  # (num_samples, 14, 3)
 
         pred_joints_coco_samples = pred_smpl_output_samples.joints[:, constants.ALL_JOINTS_TO_COCO_MAP, :]  # (num_pred_samples, 17, 3)
         pred_joints2D_coco_samples = orthographic_project_torch(pred_joints_coco_samples, pred_cam_wp_samples)  # (num_pred_samples, 17, 2)
@@ -186,11 +185,9 @@ def evaluate_ssp3d(model,
         pred_vertices_spin = pred_vertices_spin.cpu().detach().numpy()
         pred_vertices2D_spin_for_vis = pred_vertices2D_spin_for_vis.cpu().detach().numpy()
         pred_joints2D_coco_spin = pred_joints2D_coco_spin.cpu().detach().numpy()
-        pred_joints2D_coco_spin_for_vis = pred_joints2D_coco_spin_for_vis.cpu().detach().numpy()
         pred_reposed_vertices_spin = pred_reposed_vertices_spin.cpu().detach().numpy()
 
         pred_vertices_samples = pred_vertices_samples.cpu().detach().numpy()
-        pred_joints_h36mlsp_samples = pred_joints_h36mlsp_samples.cpu().detach().numpy()
         pred_joints_coco_samples = pred_joints_coco_samples.cpu().detach().numpy()
         pred_joints2D_coco_samples = pred_joints2D_coco_samples.cpu().detach().numpy()
         pred_reposed_vertices_samples = pred_reposed_vertices_samples.cpu().detach().numpy()
@@ -337,10 +334,10 @@ def evaluate_ssp3d(model,
             pred_cam_t_spin = torch.stack([pred_cam_wp_spin[0, 1],
                                            pred_cam_wp_spin[0, 2],
                                            2 * constants.FOCAL_LENGTH / (constants.IMG_RES * pred_cam_wp_spin[0, 0] + 1e-9)], dim=-1).cpu().detach().numpy()
-            _, pred_silhouette_spin = renderer(vertices=pred_vertices_spin[0],
-                                               camera_translation=pred_cam_t_spin.copy(),
-                                               image=np.zeros((constants.IMG_RES, constants.IMG_RES, 3)),
-                                               return_silhouette=True)
+            _, pred_silhouette_spin = renderer_for_silh_eval(vertices=pred_vertices_spin[0],
+                                                             camera_translation=pred_cam_t_spin.copy(),
+                                                             image=np.zeros((constants.IMG_RES, constants.IMG_RES, 3)),
+                                                             return_silhouette=True)
             pred_silhouette_spin = pred_silhouette_spin[None, :, :, 0].astype(np.float32)  # (1, img_wh, img_wh)
 
             true_positive = np.logical_and(pred_silhouette_spin, target_silhouette)
@@ -374,10 +371,10 @@ def evaluate_ssp3d(model,
                                               2 * constants.FOCAL_LENGTH / (constants.IMG_RES * pred_cam_wp_samples[:, 0] + 1e-9)], dim=-1).cpu().detach().numpy()
             pred_silhouette_samples = []
             for i in range(num_pred_samples):
-                _, silh_sample = renderer(vertices=pred_vertices_samples[i],
-                                          camera_translation=pred_cam_t_samples[i].copy(),
-                                          image=np.zeros((constants.IMG_RES, constants.IMG_RES, 3)),
-                                          return_silhouette=True)
+                _, silh_sample = renderer_for_silh_eval(vertices=pred_vertices_samples[i],
+                                                        camera_translation=pred_cam_t_samples[i].copy(),
+                                                        image=np.zeros((constants.IMG_RES, constants.IMG_RES, 3)),
+                                                        return_silhouette=True)
                 pred_silhouette_samples.append(silh_sample[:, :, 0].astype(np.float32))
             pred_silhouette_samples = np.stack(pred_silhouette_samples, axis=0)[None, :, :, :]  # (1, num_samples, img_wh, img_wh)
             target_silhouette_tiled = np.tile(target_silhouette[:, None, :, :], (1, num_pred_samples, 1, 1))  # (1, num_samples, img_wh, img_wh)
@@ -409,7 +406,6 @@ def evaluate_ssp3d(model,
         # ------------------------------- VISUALISE -------------------------------
         if vis_every_n_batches is not None and batch_num % vis_every_n_batches == 0:
             vis_img = samples_batch['vis_img'].numpy()
-            vis_img = np.transpose(vis_img, [0, 2, 3, 1])
 
             pred_cam_t_spin = torch.stack([pred_cam_wp_spin[0, 1],
                                            pred_cam_wp_spin[0, 2],
@@ -424,25 +420,25 @@ def evaluate_ssp3d(model,
                 vertices_uncertainty_per_frame.append(avg_vertices_distance_from_mean)
 
             # Render predicted meshes
-            body_vis_rgb_spin = renderer(vertices=pred_vertices_spin[0],
-                                         camera_translation=pred_cam_t_spin.copy(),
-                                         image=vis_img[0])
-            body_vis_rgb_spin_rot = renderer(vertices=pred_vertices_spin[0],
-                                             camera_translation=pred_cam_t_spin.copy() if not extreme_crop else rot_cam_t.copy(),
-                                             image=np.zeros_like(vis_img[0]),
-                                             angle=np.pi / 2.,
-                                             axis=[0., 1., 0.])
-
-            reposed_body_vis_rgb_spin = renderer(vertices=pred_reposed_vertices_spin[0],
-                                                 camera_translation=reposed_cam_t.copy(),
-                                                 image=np.zeros_like(vis_img[0]),
-                                                 flip_updown=False)
-            reposed_body_vis_rgb_mean_rot = renderer(vertices=pred_reposed_vertices_spin[0],
-                                                     camera_translation=reposed_cam_t.copy(),
+            body_vis_rgb_spin = renderer_for_vis(vertices=pred_vertices_spin[0],
+                                                 camera_translation=pred_cam_t_spin.copy(),
+                                                 image=vis_img[0])
+            body_vis_rgb_spin_rot = renderer_for_vis(vertices=pred_vertices_spin[0],
+                                                     camera_translation=pred_cam_t_spin.copy() if not extreme_crop else rot_cam_t.copy(),
                                                      image=np.zeros_like(vis_img[0]),
                                                      angle=np.pi / 2.,
-                                                     axis=[0., 1., 0.],
-                                                     flip_updown=False)
+                                                     axis=[0., 1., 0.])
+
+            reposed_body_vis_rgb_spin = renderer_for_vis(vertices=pred_reposed_vertices_spin[0],
+                                                         camera_translation=reposed_cam_t.copy(),
+                                                         image=np.zeros_like(vis_img[0]),
+                                                         flip_updown=False)
+            reposed_body_vis_rgb_mean_rot = renderer_for_vis(vertices=pred_reposed_vertices_spin[0],
+                                                             camera_translation=reposed_cam_t.copy(),
+                                                             image=np.zeros_like(vis_img[0]),
+                                                             angle=np.pi / 2.,
+                                                             axis=[0., 1., 0.],
+                                                             flip_updown=False)
 
             body_vis_rgb_samples = []
             body_vis_rgb_rot_samples = []
@@ -450,14 +446,14 @@ def evaluate_ssp3d(model,
                                               pred_cam_wp_samples[:, 2],
                                               2 * constants.FOCAL_LENGTH / (vis_img_wh * pred_cam_wp_samples[:, 0] + 1e-9)], dim=-1).cpu().detach().numpy()
             for i in range(num_samples_to_visualise):
-                body_vis_rgb_samples.append(renderer(vertices=pred_vertices_samples[i],
-                                                     camera_translation=pred_cam_t_samples[i].copy(),
-                                                     image=vis_img[0]))
-                body_vis_rgb_rot_samples.append(renderer(vertices=pred_vertices_samples[i],
-                                                         camera_translation=pred_cam_t_samples[i].copy() if not extreme_crop else rot_cam_t.copy(),
-                                                         image=np.zeros_like(vis_img[0]),
-                                                         angle=np.pi / 2.,
-                                                         axis=[0., 1., 0.]))
+                body_vis_rgb_samples.append(renderer_for_vis(vertices=pred_vertices_samples[i],
+                                                             camera_translation=pred_cam_t_samples[i].copy(),
+                                                             image=vis_img[0]))
+                body_vis_rgb_rot_samples.append(renderer_for_vis(vertices=pred_vertices_samples[i],
+                                                                 camera_translation=pred_cam_t_samples[i].copy() if not extreme_crop else rot_cam_t.copy(),
+                                                                 image=np.zeros_like(vis_img[0]),
+                                                                 angle=np.pi / 2.,
+                                                                 axis=[0., 1., 0.]))
 
             # Save samples
             samples_save_path = os.path.join(save_path, os.path.splitext(fname[0])[0] + '_samples.npy')
@@ -516,15 +512,15 @@ def evaluate_ssp3d(model,
                 plt.scatter(target_joints2D_coco[0, :, 0],
                             target_joints2D_coco[0, :, 1],
                             c=target_joints2D_vis_coco[0, :].astype(np.float32), s=10.0)
-                plt.scatter(pred_joints2D_coco_spin_for_vis[0, :, 0],
-                            pred_joints2D_coco_spin_for_vis[0, :, 1],
+                plt.scatter(pred_joints2D_coco_spin[0, :, 0],
+                            pred_joints2D_coco_spin[0, :, 1],
                             c='r', s=10.0)
                 for j in range(target_joints2D_coco.shape[1]):
                     plt.text(target_joints2D_coco[0, j, 0],
                              target_joints2D_coco[0, j, 1],
                              str(j))
-                    plt.text(pred_joints2D_coco_spin_for_vis[0, j, 0],
-                             pred_joints2D_coco_spin_for_vis[0, j, 1],
+                    plt.text(pred_joints2D_coco_spin[0, j, 0],
+                             pred_joints2D_coco_spin[0, j, 1],
                              str(j))
                 plt.text(10, 30, s='J2D L2E: {:.4f}'.format(per_frame_metrics['joints2D_l2es'][batch_num][0]))
             subplot_count += 1
@@ -900,21 +896,12 @@ if __name__ == '__main__':
     model.eval()
 
     # Setup evaluation dataset
-    if use_subset:
-        selected_fnames = subsets.PW3D_OCCLUDED_JOINTS
-        vis_every_n_batches = 1
-        vis_joints_threshold = 0.8
-    else:
-        selected_fnames = None
-        vis_every_n_batches = 1000
-        vis_joints_threshold = 0.6
-
-    # Setup evaluation dataset
     dataset_path = '/scratch/as2562/datasets/ssp_3d'
     dataset = SSP3DEvalDataset(dataset_path,
                                img_wh=constants.IMG_RES,
                                extreme_crop=extreme_crop,
-                               extreme_crop_scale=extreme_crop_scale)
+                               extreme_crop_scale=extreme_crop_scale,
+                               vis_img_wh=512)
     print("Eval examples found:", len(dataset))
 
     # Metrics
@@ -927,8 +914,6 @@ if __name__ == '__main__':
     metrics.append('silhouettesamples_ious')
 
     save_path = '/scratch/as2562/3D-Multibodies/evaluations/ssp3d_{}_samples'.format(num_samples)
-    if use_subset:
-        save_path += '_selected_fnames_occluded_joints'
     if extreme_crop:
         save_path += '_extreme_crop_scale_{}'.format(extreme_crop_scale)
     if not os.path.exists(save_path):
@@ -944,7 +929,8 @@ if __name__ == '__main__':
                    num_pred_samples=num_samples,
                    num_workers=4,
                    pin_memory=True,
-                   vis_every_n_batches=vis_every_n_batches,
+                   vis_every_n_batches=1000,
+                   vis_img_wh=512,
                    num_samples_to_visualise=10,
                    save_per_frame_uncertainty=True,
                    extreme_crop=extreme_crop)
