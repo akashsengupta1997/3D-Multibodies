@@ -338,6 +338,7 @@ def evaluate_ssp3d(model,
                                                              camera_translation=pred_cam_t_spin.copy(),
                                                              image=np.zeros((constants.IMG_RES, constants.IMG_RES, 3)),
                                                              return_silhouette=True)
+            print(pred_silhouette_spin)
             pred_silhouette_spin = pred_silhouette_spin[None, :, :, 0].astype(np.float32)  # (1, img_wh, img_wh)
 
             true_positive = np.logical_and(pred_silhouette_spin, target_silhouette)
