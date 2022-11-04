@@ -32,8 +32,14 @@ class Renderer:
         rend_imgs = make_grid(rend_imgs, nrow=2)
         return rend_imgs
 
-    def __call__(self, vertices, camera_translation, image,
-                 angle=None, axis=None, flip_updown=True):
+    def __call__(self,
+                 vertices,
+                 camera_translation,
+                 image,
+                 angle=None,
+                 axis=None,
+                 flip_updown=True,
+                 return_silhouette=False):
         material = pyrender.MetallicRoughnessMaterial(
             metallicFactor=0.2,
             alphaMode='OPAQUE',
@@ -79,4 +85,8 @@ class Renderer:
         valid_mask = (rend_depth > 0)[:,:,None]
         output_img = (color[:, :, :3] * valid_mask +
                   (1 - valid_mask) * image)
-        return output_img
+
+        if return_silhouette:
+            return output_img, valid_mask
+        else:
+            return output_img
