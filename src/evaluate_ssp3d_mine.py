@@ -180,6 +180,7 @@ def evaluate_ssp3d(model,
         target_reposed_vertices = target_reposed_vertices.cpu().detach().numpy()
         target_joints2D_coco = target_joints2D_coco.cpu().detach().numpy()
         target_joints2D_vis_coco = target_joints2D_vis_coco.cpu().detach().numpy()
+        target_silhouette = target_silhouette.cpu().detach().numpy()
 
         # Numpy-fying preds
         pred_vertices_spin = pred_vertices_spin.cpu().detach().numpy()
@@ -338,7 +339,6 @@ def evaluate_ssp3d(model,
                                                              camera_translation=pred_cam_t_spin.copy(),
                                                              image=np.zeros((constants.IMG_RES, constants.IMG_RES, 3)),
                                                              return_silhouette=True)
-            print(pred_silhouette_spin)
             pred_silhouette_spin = pred_silhouette_spin[None, :, :, 0].astype(np.float32)  # (1, img_wh, img_wh)
 
             true_positive = np.logical_and(pred_silhouette_spin, target_silhouette)
